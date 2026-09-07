@@ -92,6 +92,18 @@ test('compact desktop layout keeps the start and HUD within the viewport', async
   await page.screenshot({path:'test-results/hud-compact-v16.png'});
 });
 
+test('HUD art and live controls share exact coordinates at 150 percent DPI',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:1525,height:566},deviceScaleFactor:1.5});const page=await context.newPage();
+  await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
+  const geometry=await page.evaluate(()=>{const box=(selector:string)=>{const r=document.querySelector(selector)!.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height,cx:r.x+r.width/2,cy:r.y+r.height/2}};return{art:box('.hud-art'),life:box('#life-meter'),mana:box('#mana-meter'),slots:[...document.querySelectorAll('#skill-slots .skill-slot')].map((element)=>{const r=element.getBoundingClientRect();return{cx:r.x+r.width/2,cy:r.y+r.height/2}}),before:getComputedStyle(document.querySelector('#hud')!,'::before').display,after:getComputedStyle(document.querySelector('#hud')!,'::after').display};});
+  expect(geometry.before).toBe('none');expect(geometry.after).toBe('none');expect(geometry.art.w/geometry.art.h).toBeCloseTo(2080/352,2);
+  const close=(actual:number,expected:number)=>expect(Math.abs(actual-expected)).toBeLessThanOrEqual(1.5);
+  close(geometry.life.cx,geometry.art.x+geometry.art.w*.19159);close(geometry.life.cy,geometry.art.y+geometry.art.h*.41619);
+  close(geometry.mana.cx,geometry.art.x+geometry.art.w*.81034);close(geometry.mana.cy,geometry.art.y+geometry.art.h*.42188);
+  const centers=[714.5,858,999.5,1141,1283.5,1426.5].map(x=>(x-31)/2080);geometry.slots.forEach((slot,index)=>{close(slot.cx,geometry.art.x+geometry.art.w*centers[index]);close(slot.cy,geometry.art.y+geometry.art.h*((420.5-188)/352));});
+  await page.screenshot({path:'test-results/hud-dpi-150-v17.png'});await context.close();
+});
+
 test('Chinese and English UI, fogged walls and authored combat effects are active',async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');
   await page.locator('.selection-language').click();await expect(page.locator('html')).toHaveAttribute('lang','en');await expect(page.locator('#game-title')).toHaveText('ACCURSED COVENANT');await expect(page.locator('.character-choice').first()).toContainText('Storm Sorceress');

@@ -82,42 +82,37 @@
 
 .item-card.common{box-shadow:inset 0 0 16px #d4d4d414!important}.item-card.magic{box-shadow:inset 0 0 18px #6b93ff20!important}.item-card.rare{box-shadow:inset 0 0 18px #f0d56b20!important}.item-card.epic{box-shadow:inset 0 0 20px #bb86e826!important}.item-card.set{box-shadow:inset 0 0 20px #79d8782b!important}.item-card.unique{box-shadow:inset 0 0 22px #c7aa7030!important}.item-card.legendary{box-shadow:inset 0 0 24px #f69b4633!important}
 
-/* The generated ornament supplies the HUD surface; live elements remain responsible for values and input. */
-.hud{width:min(1240px,calc(100vw - 12px));height:240px;padding:0;display:block;isolation:isolate;overflow:visible}
-.hud::before{left:-12vw;right:-12vw;height:240px;background:linear-gradient(transparent,#020304d9 36%,#020304 100%)}
-.hud::after{display:block!important;content:'';position:absolute;inset:0;z-index:-2;background:#030405!important;border:0!important;clip-path:none!important;box-shadow:none!important;pointer-events:none}
-/* Source image alpha bounds are x=31..2111 and y=188..540. Cropping in a real aspect-ratio box keeps every live layer aligned at any browser DPI. */
+/* HUD geometry is measured from the authored alpha bounds: x 31..2111, y 188..540. */
+.hud{width:min(1240px,calc(100vw - 12px));height:245px;padding:0;display:block;isolation:isolate;overflow:visible;background:transparent!important}
+.hud::before,.hud::after{display:none!important}
 .hud-art{position:absolute;z-index:0;left:0;top:0;width:100%;aspect-ratio:2080/352;overflow:hidden;pointer-events:none}
 .hud-art img{position:absolute;display:block;width:102.2597%;height:auto;left:-1.4904%;top:-53.4091%;max-width:none}
-.hud .orb-group{position:absolute;bottom:0;width:186px;height:210px;z-index:2;text-align:center}
-.hud .life-group{left:12.1%}.hud .mana-group{right:13.7%}
-.hud .orb-mount{position:absolute;left:5px;top:-21px;width:176px;height:176px}
-.hud .life-group .orb-mount{left:2px}.hud .mana-group .orb-mount{left:27px}
-.hud .orb{width:176px;height:176px;background:transparent!important;mix-blend-mode:normal!important}
-.hud .orb-liquid{left:17%;right:17%;bottom:17%;height:66%!important}
-.hud .orb .glass{inset:17%}.hud .orb::after{inset:19%}.hud .orb-shield{inset:16%}
-.hud .orb-label{position:absolute;left:12px;bottom:4px;margin:0;z-index:5}
-.hud .orb-label span{display:none}.hud .orb-label small{font-size:10px;letter-spacing:.14em;color:#b9a57e}
-.hud .orb-value{position:absolute;right:4px;bottom:2px;margin:0;z-index:5;font-size:13px;color:#dec79a}
-.hud .orb-value span{font-size:10px;color:#8e8779}
-.hud .hotbar{position:absolute;z-index:2;left:50%;bottom:80px;transform:translateX(-50%);width:540px;margin:0;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
-.hud .experience{height:18px;margin:0 17px 6px;gap:7px;font-size:8px}
-.hud .experience>div{height:4px;border-color:#594a32;background:#030405}.hud #xp-label{font-size:8px}
-.hud .skill-slots{width:500px;margin:0 auto;padding:0;grid-template-columns:repeat(6,1fr);gap:10px;background:none!important;border:0!important;outline:0;box-shadow:none}
-.hud .skill-slot{height:70px;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible}
-.hud .skill-slot .asset-icon{width:60px;height:60px}.hud .slot-name{display:none}
-.hud .slot-key{top:auto;bottom:-17px;left:50%;transform:translateX(-50%);padding:0;background:none;font:11px Cinzel,serif;color:#c5ad7e!important}
-.hud .slot-level{top:2px;right:5px;bottom:auto;background:#050607b8;padding:1px 2px}
-.hud .hotbar-bottom{display:none}
+.hud .orb-group{position:absolute;z-index:2;top:0;width:18%;height:85.714%;transform:translateX(-50%);text-align:center}
+.hud .life-group{left:19.159%}.hud .mana-group{left:81.034%;right:auto}
+.hud .orb-mount{position:absolute;left:50%;top:14.1%;width:52.083%;height:auto;aspect-ratio:1;transform:translateX(-50%)}
+.hud .mana-group .orb-mount{top:14.67%}
+.hud .orb{width:100%;height:100%;background:transparent!important;mix-blend-mode:normal!important}
+.hud .orb-liquid{left:0;right:0;bottom:0;height:100%!important}
+.hud .orb .glass{inset:0}.hud .orb::after{inset:2%}.hud .orb-shield{inset:0}
+.hud .orb-caption{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);display:flex;align-items:baseline;justify-content:center;gap:12px;width:130%;white-space:nowrap;z-index:5}
+.hud .orb-label{position:static;margin:0}.hud .orb-label span{display:none}.hud .orb-label small{font-size:10px;letter-spacing:.18em;color:#b9a57e}
+.hud .orb-value{position:static;margin:0;font-size:13px;color:#dec79a}.hud .orb-value span{font-size:10px;color:#8e8779}
+.hud .hotbar{position:absolute;z-index:2;inset:0;width:100%;height:85.714%;margin:0;padding:0!important;transform:none;background:none!important;border:0!important;box-shadow:none!important;pointer-events:none}
+.hud .experience{position:absolute;left:25.385%;top:41.193%;width:49.471%;height:2.1%;margin:0;display:block;font-size:0}
+.hud .experience>span{position:absolute;z-index:2;top:50%;transform:translateY(-50%);font-size:8px;text-shadow:0 1px 2px #000}.hud #level{left:6px}.hud #xp-label{right:6px;min-width:55px;text-align:right}
+.hud .experience>div{position:absolute;inset:0 64px 0 38px;height:auto;border:0;background:transparent}.hud .experience i{height:100%}
+.hud .skill-slots{position:absolute;left:30.144%;top:49.148%;width:39.712%;height:33.807%;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,13.8%);column-gap:3.44%;background:none!important;border:0!important;outline:0;box-shadow:none;pointer-events:auto}
+.hud .skill-slot{width:100%;height:100%;min-width:0;padding:0;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible}
+.hud .burst-slot{margin-left:0}
+.hud .skill-slot .asset-icon{width:100%;height:auto;aspect-ratio:1;background-size:476.4% 476.4%;background-position:var(--hud-icon-x) var(--hud-icon-y)!important;image-rendering:pixelated}
+.hud .slot-name{display:none}.hud .empty-sigil{font-size:24px}
+.hud .slot-key{top:102%;bottom:auto;left:50%;transform:translateX(-50%);padding:0;background:none;font:11px Cinzel,serif;color:#c5ad7e!important}
+.hud .slot-level{top:3%;right:4%;bottom:auto;background:#050607b8;padding:1px 2px}.hud .hotbar-bottom{display:none}
 
 @media(max-width:1100px){
   .topbar .wordmark{font-size:14px;letter-spacing:.1em;gap:7px}.topbar .brand-sigil{font-size:28px}.topbar .build-tag{display:none}
-  .hud{height:196px;width:calc(100vw - 8px)}.hud::before{height:196px}
-  .hud .orb-group{width:145px;height:170px}.hud .life-group{left:11.7%}.hud .mana-group{right:13.2%}
-  .hud .orb-mount{left:4px;top:-30px;width:138px;height:138px}.hud .life-group .orb-mount{left:10px}.hud .mana-group .orb-mount{left:15px}.hud .orb{width:138px;height:138px}
-  .hud .orb-label{left:8px;bottom:3px}.hud .orb-value{right:1px;bottom:1px;font-size:11px}.hud .orb-value span{font-size:8px}
-  .hud .hotbar{width:450px;bottom:23px}.hud .experience{margin:0 12px 4px;height:14px}
-  .hud .skill-slots{width:418px;gap:8px}.hud .skill-slot{height:55px}.hud .skill-slot .asset-icon{width:47px;height:47px}
-  .hud .slot-key{bottom:-14px;font-size:9px}
+  .hud{height:205px;width:calc(100vw - 8px)}
+  .hud .orb-label small{font-size:9px}.hud .orb-value{font-size:11px}.hud .orb-value span{font-size:8px}.hud .orb-caption{gap:8px}
+  .hud .slot-key{font-size:9px}.hud .empty-sigil{font-size:19px}
 }
 
