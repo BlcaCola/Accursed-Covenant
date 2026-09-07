@@ -2,11 +2,11 @@
    CSS controls layout, clipping, focus, animation and live numeric information only. */
 :root { --ui-atlas: url('../assets/ui/frame-atlas-v3.png'); }
 .asset-icon { display:inline-block; width:44px; height:44px; flex:0 0 auto; background-image:url('../assets/ui/icon-atlas-v3.png'); background-size:400% 400%; image-rendering:pixelated; vertical-align:middle; }
-.dialog,.inventory-dialog,.map-panel,.character-detail,.forge-panel,.greed-tag,.notice,.hotbar,.topbar { background-image:var(--ui-atlas)!important; background-size:200% 200%!important; background-position:0 100%!important; border:0!important; box-shadow:none!important; }
+.dialog,.inventory-dialog,.map-panel,.character-detail,.forge-panel,.greed-tag,.notice,.topbar { background-image:var(--ui-atlas)!important; background-size:200% 200%!important; background-position:0 100%!important; border:0!important; box-shadow:none!important; }
 .topbar { background-size:200% 600%!important; background-position:0 70%!important; }
 .dialog,.inventory-dialog { padding:42px 46px; }
 .dialog::before,.dialog::after,.hud::after,.wing,.mount-jewel,.orb-mount::before,.orb-mount::after { display:none!important; }
-.primary,.secondary,.equip-button,.salvage-button,.icon-button,.character-choice,.upgrade-card,.equipment-slot,.item-card,.toggle-row,.skill-slot,.hotbar-bottom button { background-image:var(--ui-atlas)!important; background-size:200% 200%!important; background-position:100% 100%!important; border:0!important; box-shadow:none; }
+.primary,.secondary,.equip-button,.salvage-button,.icon-button,.character-choice,.upgrade-card,.equipment-slot,.item-card,.toggle-row,.hotbar-bottom button { background-image:var(--ui-atlas)!important; background-size:200% 200%!important; background-position:100% 100%!important; border:0!important; box-shadow:none; }
 .primary,.secondary { min-height:52px; padding:15px 28px; }
 .primary:hover:not(:disabled),.secondary:hover:not(:disabled),.character-choice:hover,.upgrade-card:hover,.equip-button:hover { filter:brightness(1.4) drop-shadow(0 0 7px #c9934e55); }
 .character-choice.selected { filter:brightness(1.3) drop-shadow(0 0 7px #c9a06077); }
@@ -49,7 +49,7 @@
 @media(max-width:1100px) { .orb-group{width:132px;flex-basis:132px}.orb-mount,.orb{width:132px;height:132px}.hotbar{padding:8px 10px}.skill-slot .asset-icon{width:48px;height:48px}.dialog,.inventory-dialog{padding:30px 32px}.character-detail{padding:20px}.character-choice .asset-icon{width:28px;height:28px} }
 @media(prefers-reduced-motion:reduce) { .skill-slot.ready,.orb::after,.orb-liquid,.orb-liquid::before,.orb-liquid::after,.orb-liquid i,.orb .glass{animation:none}.orb .glass,.orb-liquid{transition:none} }
 /* Nine-slice PNG borders keep skull corners and metal trim at constant scale. */
-.dialog,.inventory-dialog,.map-panel,.character-details,.forge-panel,.greed-tag,.notice,.hotbar,.topbar,
+.dialog,.inventory-dialog,.map-panel,.character-details,.forge-panel,.greed-tag,.notice,.topbar,
 .primary,.secondary,.equip-button,.salvage-button,.icon-button,.character-choice,.upgrade-card,.equipment-slot,.item-card,.toggle-row,.hotbar-bottom button {
   background:none!important; border:12px solid transparent!important; border-image:url('../assets/ui/panel-v3.png') 115 fill / 12px / 0 stretch!important; box-shadow:none!important;
 }
@@ -85,16 +85,19 @@
 /* The generated ornament supplies the HUD surface; live elements remain responsible for values and input. */
 .hud{width:min(1240px,calc(100vw - 12px));height:220px;padding:0;display:block;isolation:isolate;overflow:visible}
 .hud::before{left:-12vw;right:-12vw;height:230px;background:linear-gradient(transparent,#020304d9 44%,#020304 100%)}
-.hud::after{display:block!important;content:'';position:absolute;inset:0;z-index:-1;background:#030405 url('../assets/ui/hud-frame-v1.png') center 36%/100% auto no-repeat!important;border:0!important;clip-path:none!important;box-shadow:none!important;pointer-events:none}
+.hud::after{display:block!important;content:'';position:absolute;inset:0;z-index:-1;background:#030405 url('../assets/ui/hud-frame-v1.png') center center/100% auto no-repeat!important;border:0!important;clip-path:none!important;box-shadow:none!important;pointer-events:none}
 .hud .orb-group{position:absolute;bottom:0;width:186px;height:210px;z-index:2;text-align:center}
 .hud .life-group{left:12.1%}.hud .mana-group{right:13.7%}
-.hud .orb-mount{position:absolute;left:5px;top:2px;width:176px;height:176px}
-.hud .orb{width:176px;height:176px}
+.hud .orb-mount{position:absolute;left:5px;top:-23px;width:176px;height:176px}
+.hud .life-group .orb-mount{left:14px}
+.hud .orb{width:176px;height:176px;background:transparent!important;mix-blend-mode:normal!important}
+.hud .orb-liquid{left:17%;right:17%;bottom:17%;height:66%!important}
+.hud .orb .glass{inset:17%}.hud .orb::after{inset:19%}.hud .orb-shield{inset:16%}
 .hud .orb-label{position:absolute;left:12px;bottom:4px;margin:0;z-index:5}
 .hud .orb-label span{display:none}.hud .orb-label small{font-size:10px;letter-spacing:.14em;color:#b9a57e}
 .hud .orb-value{position:absolute;right:4px;bottom:2px;margin:0;z-index:5;font-size:13px;color:#dec79a}
 .hud .orb-value span{font-size:10px;color:#8e8779}
-.hud .hotbar{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);width:540px;margin:0;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+.hud .hotbar{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);width:540px;margin:0;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
 .hud .experience{height:18px;margin:0 17px 6px;gap:7px;font-size:8px}
 .hud .experience>div{height:4px;border-color:#594a32;background:#030405}.hud #xp-label{font-size:8px}
 .hud .skill-slots{width:500px;margin:0 auto;padding:0;grid-template-columns:repeat(6,1fr);gap:10px;background:none!important;border:0!important;outline:0;box-shadow:none}
@@ -108,7 +111,7 @@
   .topbar .wordmark{font-size:14px;letter-spacing:.1em;gap:7px}.topbar .brand-sigil{font-size:28px}.topbar .build-tag{display:none}
   .hud{height:176px;width:calc(100vw - 8px)}.hud::before{height:184px}
   .hud .orb-group{width:145px;height:170px}.hud .life-group{left:11.7%}.hud .mana-group{right:13.2%}
-  .hud .orb-mount{left:4px;top:2px;width:138px;height:138px}.hud .orb{width:138px;height:138px}
+  .hud .orb-mount{left:4px;top:-8px;width:138px;height:138px}.hud .life-group .orb-mount{left:13px}.hud .orb{width:138px;height:138px}
   .hud .orb-label{left:8px;bottom:3px}.hud .orb-value{right:1px;bottom:1px;font-size:11px}.hud .orb-value span{font-size:8px}
   .hud .hotbar{width:450px;bottom:23px}.hud .experience{margin:0 12px 4px;height:14px}
   .hud .skill-slots{width:418px;gap:8px}.hud .skill-slot{height:55px}.hud .skill-slot .asset-icon{width:47px;height:47px}
