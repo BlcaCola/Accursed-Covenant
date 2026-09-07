@@ -85,7 +85,7 @@ test('compact desktop layout keeps the start and HUD within the viewport', async
   await page.locator('[data-command="talents"]').click();await expect(page.getByRole('heading',{name:/传承天赋/})).toBeVisible();await page.locator('[data-command="talent-close"]').last().click();
   await page.locator('[data-command="start"]').click();
   await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
-  expect(await page.locator('#hud').evaluate(element=>getComputedStyle(element,'::after').backgroundImage)).toContain('hud-frame-v1.png');
+  await expect(page.locator('.hud-art img')).toHaveAttribute('src',/hud-frame-v1\.png/);
   for (const id of ['#life-meter', '#mana-meter', '#skill-slots']) {
     const box = await page.locator(id).boundingBox(); expect(box).toBeTruthy(); expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(1024); expect(box!.y + box!.height).toBeLessThanOrEqual(720);
   }
