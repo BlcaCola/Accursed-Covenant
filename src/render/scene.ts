@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Run, idleInput } from '../core/run';
 import { QUALITY_ORDER, RARITY_COLORS, WEAPONS } from '../core/equipment';
-import { buildFlow, TILE, walkable } from '../core/dungeon';
+import { findWalkPath, TILE } from '../core/dungeon';
 import { Random, fixed2 } from '../core/random';
 import { THEMES,THEME_IDS } from '../core/themes';
 import {THEME_DESIGNS,type FloorMotif} from '../core/themeDesigns';
@@ -75,7 +75,8 @@ export class GameScene extends Phaser.Scene {
   private pointerActive = false;
   private pendingActions = new Set<string>();
   private clickMoveTarget?:Vec;
-  private clickMoveFlow?:Int16Array;
+  private clickMovePath:Vec[]=[];
+  private clickMoveNavigationState='';
   private playerMoving=false;
   private hitStop = 0;
   private pendingBuildRevision = -1;
@@ -137,9 +138,17 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setZoom(Math.min(1.25, Math.max(.75, width / 1280)));
   }
   private setClickMoveTarget(pointer:Phaser.Input.Pointer):void{
-    const point=unproject(this.cameras.main.getWorldPoint(pointer.x,pointer.y)),map=this.bridge.run.dungeon;
-    let target=point;if(!walkable(map,target.x,target.y,8)){let found:Vec|undefined;for(let radius=1;radius<=5&&!found;radius++)for(let oy=-radius;oy<=radius&&!found;oy++)for(let ox=-radius;ox<=radius;ox++){const candidate={x:(Math.floor(point.x/TILE)+ox+.5)*TILE,y:(Math.floor(point.y/TILE)+oy+.5)*TILE};if(walkable(map,candidate.x,candidate.y,8)){found=candidate;break}}if(!found)return;target=found;}
-    this.clickMoveTarget=target;this.clickMoveFlow=buildFlow(map,target);
+    this.clickMoveTarget=unproject(this.cameras.main.getWorldPoint(pointer.x,pointer.y));this.rebuildClickPath();
+  }
+  private navigationState():string{const run=this.bridge.run;return`${run.worldRevision}:${run.activeRoomEncounter?.room??-1}:${Number(run.bossUnlocked)}:${Number(run.guardianSpawned)}`;}
+  private navigationAllowed(x:number,y:number):boolean{
+    const run=this.bridge.run,locked=run.activeRoomEncounter;if(locked){const room=run.dungeon.rooms[locked.room];return x>=room.x&&x<room.x+room.w&&y>=room.y&&y<room.y+room.h;}
+    if(!run.showcaseMode&&!run.bossUnlocked&&!run.guardianSpawned){const room=run.dungeon.rooms[run.dungeon.bossRoom];if(x>=room.x&&x<room.x+room.w&&y>=room.y&&y<room.y+room.h)return false;}
+    return true;
+  }
+  private rebuildClickPath():void{
+    if(!this.clickMoveTarget)return;const run=this.bridge.run;this.clickMoveNavigationState=this.navigationState();this.clickMovePath=findWalkPath(run.dungeon,run.player,this.clickMoveTarget,10,(x,y)=>this.navigationAllowed(x,y));
+    if(!this.clickMovePath.length)this.clickMoveTarget=undefined;
   }
   private paintThemeMotif(floor:Phaser.GameObjects.Graphics,c:Vec,motif:FloorMotif,accent:number):void{
     floor.lineStyle(2,accent,.34);floor.fillStyle(accent,.08);
@@ -291,7 +300,7 @@ export class GameScene extends Phaser.Scene {
     if(run.session.equippedWing&&!this.wing){this.wing=authoredSprite(this,'wing',run.session.equippedWing,p.x,p.y-34,72).setDepth(p.y+8);this.worldObjects.push(this.wing);}
     this.hero = authoredSprite(this,'character',run.characterId,p.x,p.y,88).setDepth(p.y+10); this.worldObjects.push(this.hero);
     for(const id of run.activeNpcs){const location=run.npcPosition(id),np=project(location);if(id==='merchant'){const stall=this.add.image(np.x,np.y-24,'merchant-stall').setOrigin(.5,.72).setDisplaySize(210,150).setDepth(np.y-2);this.worldObjects.push(stall);}const image=authoredSprite(this,'npc',id,np.x,np.y,82).setDepth(np.y);this.worldObjects.push(image);this.npcImages.push({id,image});const source={merchant:'商人',blacksmith:'铁匠',beggar:'乞丐','distant-traveler':'远方旅客'}[id],label=this.add.text(np.x,np.y-88,tr(source),{fontFamily:'serif',fontSize:'12px',color:'#d7b778',stroke:'#090a0b',strokeThickness:4}).setOrigin(.5).setDepth(7000);this.localizedLabels.push({text:label,source});this.worldObjects.push(label);}
-    this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;this.configureCamera(); this.cameras.main.centerOn(p.x, p.y);this.bridge.onLoading(this.bridge.started,96,tr('唤醒怪物与光效…'));
+    this.clickMoveTarget=undefined;this.clickMovePath=[];this.clickMoveNavigationState='';this.configureCamera(); this.cameras.main.centerOn(p.x, p.y);this.bridge.onLoading(this.bridge.started,96,tr('唤醒怪物与光效…'));
     this.accumulator = 0;
   }
 
@@ -310,10 +319,12 @@ export class GameScene extends Phaser.Scene {
       const sy = Number(this.keys.S.isDown || this.keys.DOWN.isDown) - Number(this.keys.W.isDown || this.keys.UP.isDown);
       // Translate screen directions into the isometric ground plane.
       input.x = sx / 2 + sy; input.y = sy - sx / 2;
-      if(sx||sy){this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;}
-      else if(this.clickMoveTarget&&this.clickMoveFlow){
-        const p=run.player,target=this.clickMoveTarget;if(Math.hypot(target.x-p.x,target.y-p.y)<14){this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;}
-        else{const tx=Math.floor(p.x/TILE),ty=Math.floor(p.y/TILE),index=ty*run.dungeon.size+tx,current=this.clickMoveFlow[index],steps=[[tx-1,ty],[tx+1,ty],[tx,ty-1],[tx,ty+1]].map(([x,y])=>({x,y,value:this.clickMoveFlow![y*run.dungeon.size+x]})).filter(step=>step.value>=0&&step.value<current).sort((a,b)=>a.value-b.value),next=steps[0];if(!next){this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;}else{const destination=next.value<=1?target:{x:(next.x+.5)*TILE,y:(next.y+.5)*TILE},length=Math.hypot(destination.x-p.x,destination.y-p.y)||1;input.x=(destination.x-p.x)/length;input.y=(destination.y-p.y)/length;}}
+      if(sx||sy){this.clickMoveTarget=undefined;this.clickMovePath=[];}
+      else if(this.clickMoveTarget){
+        if(this.clickMoveNavigationState!==this.navigationState())this.rebuildClickPath();
+        const p=run.player;while(this.clickMovePath.length&&Math.hypot(this.clickMovePath[0].x-p.x,this.clickMovePath[0].y-p.y)<12)this.clickMovePath.shift();
+        const destination=this.clickMovePath[0];if(!destination)this.clickMoveTarget=undefined;
+        else{const length=Math.hypot(destination.x-p.x,destination.y-p.y)||1;input.x=(destination.x-p.x)/length;input.y=(destination.y-p.y)/length;}
       }
       if (this.pointerActive) { const pointer = this.input.activePointer; const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y); input.aim = unproject(point); }
       // Buffer edge-triggered commands: a short tap between slow frames must not vanish.

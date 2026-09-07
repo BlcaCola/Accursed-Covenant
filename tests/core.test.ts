@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFlow, generateDungeon, moveOnMap, roomsForFloor, TILE, walkable } from '../src/core/dungeon';
+import { buildFlow, findWalkPath, generateDungeon, moveOnMap, roomsForFloor, TILE, walkable } from '../src/core/dungeon';
 import { Random } from '../src/core/random';
 import { createItem } from '../src/core/loot';
 import { freshSession, idleInput, Run } from '../src/core/run';
@@ -36,6 +36,13 @@ describe('random generation and navigation', () => {
     const map = generateDungeon(12), body = { ...map.start };
     for (let i = 0; i < 600; i++) moveOnMap(map, body, -5, -5);
     expect(walkable(map, body.x, body.y)).toBe(true);
+  });
+  it('routes around solid scenery and stops at the nearest reachable point',()=>{
+    const size=9,tiles=new Uint8Array(size*size);for(let y=1;y<size-1;y++)for(let x=1;x<size-1;x++)tiles[y*size+x]=1;
+    const point=(x:number,y:number)=>({x:(x+.5)*TILE,y:(y+.5)*TILE}),start=point(1,3),target=point(7,3);
+    const map={size,tiles,rooms:[{x:1,y:1,w:7,h:5,type:'entry' as const}],start,exit:target,altar:start,chests:[],seed:1,theme:'dungeon' as const,floor:1,bossRoom:0,hiddenRooms:[],breakableWalls:[],mechanisms:[],props:[{id:1,room:0,...point(4,3),kind:'pillar' as const,frame:0,height:80,radius:17,solid:true}]};
+    const route=findWalkPath(map,start,target);expect(route.at(-1)).toEqual(target);expect(route.every(value=>walkable(map,value.x,value.y,10))).toBe(true);expect(route.some(value=>Math.floor(value.x/TILE)===4&&Math.floor(value.y/TILE)===3)).toBe(false);
+    const nearest=findWalkPath(map,start,target,10,x=>x<4);expect(Math.floor(nearest.at(-1)!.x/TILE)).toBe(3);expect(nearest.every(value=>Math.floor(value.x/TILE)<4)).toBe(true);
   });
   it('provides fifteen themes and an eight-map route with increasing room counts',()=>{
     expect(THEME_IDS).toHaveLength(15);const route=campaignThemes(91);expect(route).toHaveLength(8);expect(new Set(route).size).toBe(8);

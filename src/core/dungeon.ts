@@ -151,3 +151,33 @@ export function buildFlow(map:Dungeon,target:Vec):Int16Array{
     for(const next of candidates)if(next>=0&&next<dist.length&&map.tiles[next]&&dist[next]===-1){dist[next]=dist[i]+1;queue[tail++]=next}}
   return dist;
 }
+
+/**
+ * Finds the shortest player-sized route over the same geometry used by
+ * moveOnMap. Diagonal steps cannot cut between two blocked cardinal tiles.
+ * If the requested point is blocked or disconnected, the route ends at the
+ * reachable tile centre nearest to that point.
+ */
+export function findWalkPath(map:Dungeon,start:Vec,target:Vec,radius=10,allowed:(x:number,y:number)=>boolean=()=>true):Vec[]{
+  const size=map.size,count=map.tiles.length,inside=(x:number,y:number)=>x>=0&&y>=0&&x<size&&y<size;
+  const center=(index:number):Vec=>({x:(index%size+.5)*TILE,y:(Math.floor(index/size)+.5)*TILE});
+  const passability=new Int8Array(count);passability.fill(-1);
+  const passable=(x:number,y:number)=>{if(!inside(x,y))return false;const index=y*size+x;if(passability[index]<0)passability[index]=Number(allowed(x,y)&&walkable(map,(x+.5)*TILE,(y+.5)*TILE,radius));return passability[index]===1;};
+  const sx=Math.max(0,Math.min(size-1,Math.floor(start.x/TILE))),sy=Math.max(0,Math.min(size-1,Math.floor(start.y/TILE))),startIndex=sy*size+sx;
+  const tx=Math.max(0,Math.min(size-1,Math.floor(target.x/TILE))),ty=Math.max(0,Math.min(size-1,Math.floor(target.y/TILE))),targetIndex=ty*size+tx,targetExact=allowed(tx,ty)&&walkable(map,target.x,target.y,radius);
+  const costs=new Float32Array(count);costs.fill(Infinity);costs[startIndex]=0;
+  const previous=new Int32Array(count);previous.fill(-1);const closed=new Uint8Array(count),heap:number[]=[];
+  const swap=(a:number,b:number)=>{const value=heap[a];heap[a]=heap[b];heap[b]=value;};
+  const push=(index:number)=>{heap.push(index);let child=heap.length-1;while(child>0){const parent=(child-1)>>1;if(costs[heap[parent]]<=costs[heap[child]])break;swap(parent,child);child=parent;}};
+  const pop=()=>{const first=heap[0],last=heap.pop()!;if(heap.length){heap[0]=last;let parent=0;while(true){const left=parent*2+1,right=left+1;let child=parent;if(left<heap.length&&costs[heap[left]]<costs[heap[child]])child=left;if(right<heap.length&&costs[heap[right]]<costs[heap[child]])child=right;if(child===parent)break;swap(parent,child);parent=child;}}return first;};
+  push(startIndex);let best=startIndex,bestDistance=Infinity,reached=false;
+  const directions=[[-1,0,10],[1,0,10],[0,-1,10],[0,1,10],[-1,-1,14],[1,-1,14],[-1,1,14],[1,1,14]] as const;
+  while(heap.length){const index=pop();if(closed[index])continue;closed[index]=1;const x=index%size,y=Math.floor(index/size),point=center(index),targetDistance=(point.x-target.x)**2+(point.y-target.y)**2;
+    if(targetDistance<bestDistance||(targetDistance===bestDistance&&costs[index]<costs[best])){best=index;bestDistance=targetDistance;}
+    if(index===targetIndex&&targetExact){best=index;reached=true;break;}
+    for(const[dx,dy,step]of directions){const nx=x+dx,ny=y+dy;if(!passable(nx,ny))continue;if(dx&&dy&&(!passable(x+dx,y)||!passable(x,y+dy)))continue;const next=ny*size+nx,nextCost=costs[index]+step;if(nextCost>=costs[next])continue;costs[next]=nextCost;previous[next]=index;push(next);}
+  }
+  if(best===startIndex)return reached?[target]:[];
+  const indexes:number[]=[];for(let index=best;index!==startIndex&&index>=0;index=previous[index])indexes.push(index);indexes.reverse();
+  const path=indexes.map(center);if(reached)path[path.length-1]=target;return path;
+}
