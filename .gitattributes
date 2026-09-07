@@ -1,0 +1,2 @@
+public/assets/**/*.png filter=lfs diff=lfs merge=lfs -text
+public/screenshots/*.png filter=lfs diff=lfs merge=lfs -text

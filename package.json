@@ -1,0 +1,33 @@
+{
+  "name": "ashbound-demo",
+  "private": true,
+  "version": "0.12.3",
+  "description": "A browser-based gothic roguelite survivor ARPG with procedural dungeons and deep loot.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BlcaCola/Accursed-Covenant.git"
+  },
+  "keywords": ["phaser", "roguelite", "arpg", "procedural-generation", "browser-game"],
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource/cinzel": "5.3.0",
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "22.20.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "3.2.7"
+  }
+}
