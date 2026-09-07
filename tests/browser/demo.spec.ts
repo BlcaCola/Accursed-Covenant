@@ -104,6 +104,15 @@ test('HUD art and live controls share exact coordinates at 150 percent DPI',asyn
   await page.screenshot({path:'test-results/hud-dpi-150-v17.png'});await context.close();
 });
 
+test('mouse movement, manual cooldowns, basic attacks and corpse sprites work together',async({page})=>{
+  await page.setViewportSize({width:1280,height:800});await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
+  const before=await page.evaluate(()=>({...((window as any).__ASHBOUND_TEST__.run.player)}));await page.mouse.click(760,400);await expect.poll(()=>page.evaluate(start=>{const p=(window as any).__ASHBOUND_TEST__.run.player;return Math.hypot(p.x-start.x,p.y-start.y)},before)).toBeGreaterThan(35);
+  const enemyId=await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.skills.length=0;const enemy=run.spawnEnemy('zombie');Object.assign(enemy,{x:run.player.x+70,y:run.player.y,speed:0,attackCooldown:99});return enemy.id;});const hp=await page.evaluate(id=>(window as any).__ASHBOUND_TEST__.run.enemies.find((enemy:any)=>enemy.id===id).hp,enemyId);await page.mouse.click(710,435,{button:'right'});await expect.poll(()=>page.evaluate(id=>(window as any).__ASHBOUND_TEST__.run.enemies.find((enemy:any)=>enemy.id===id).hp,enemyId)).toBeLessThan(hp);
+  await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.autoCast=false;run.skills.splice(0,run.skills.length,{id:'fire',level:1,branch:null});run.corpses=[{id:990077,x:run.player.x+55,y:run.player.y+20,ttl:18}];});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.scene.corpseImages.size)).toBe(1);
+  await page.mouse.move(820,400);await page.keyboard.press('Digit1');await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.skillCooldownRemaining('fire'))).toBeGreaterThan(0);await expect(page.locator('.skill-slot .cooldown-number')).toBeVisible();await page.screenshot({path:'test-results/mouse-combat-corpse-v18.png'});
+  await page.keyboard.press('Escape');const autocast=page.locator('[data-command="autocast"]');await expect(autocast).toBeVisible();await autocast.click();expect(await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.autoCast)).toBe(true);
+});
+
 test('Chinese and English UI, fogged walls and authored combat effects are active',async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');
   await page.locator('.selection-language').click();await expect(page.locator('html')).toHaveAttribute('lang','en');await expect(page.locator('#game-title')).toHaveText('ACCURSED COVENANT');await expect(page.locator('.character-choice').first()).toContainText('Storm Sorceress');
@@ -161,7 +170,9 @@ test('exploration contracts, PNG interface, resource clipping and boss phase',as
   await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run;r.player.hp=r.stats.maxHp*.25;r.player.mana=25;const e=r.spawnEnemy('boss',true);r.floorGuardianId=e.id;Object.assign(e,{x:r.player.x+120,y:r.player.y,hp:e.maxHp*.49});r.update(1/60,{x:0,y:0,dash:false,burst:false,potion:false,interact:false});});
   await expect(page.locator('#boss-percent')).toContainText('地图守卫');
   await expect.poll(()=>page.locator('#life-meter').evaluate(e=>parseFloat((e as HTMLElement).style.getPropertyValue('--fill')))).toBeLessThan(27);
-  expect(await page.locator('#life-meter').evaluate(e=>getComputedStyle(e).backgroundImage)).toContain('ui/frame-atlas-v3.png');
+  // The Photoshop HUD frame owns the metal bezel. The orb parent stays transparent
+  // underneath it while the animated liquid child samples the original orb texture.
+  expect(await page.locator('#life-meter').evaluate(e=>getComputedStyle(e).backgroundImage)).toBe('none');
   expect(await page.locator('#life-liquid').evaluate(e=>({display:getComputedStyle(e).display,animation:getComputedStyle(e).animationName,height:parseFloat(getComputedStyle(e).height),texture:getComputedStyle(e).backgroundImage,filter:getComputedStyle(e).filter}))).toMatchObject({display:'block',animation:expect.stringContaining('orb-liquid-flow'),texture:expect.stringContaining('frame-atlas-v3.png'),filter:'none'});
   expect(await page.locator('.life-orb .glass').evaluate(e=>getComputedStyle(e).backdropFilter)).toContain('grayscale(1)');
   await expect.poll(()=>page.locator('.life-orb .glass').evaluate(e=>getComputedStyle(e).clipPath)).toContain('polygon');

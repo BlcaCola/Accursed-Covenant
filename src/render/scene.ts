@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { Run, idleInput } from '../core/run';
 import { QUALITY_ORDER, RARITY_COLORS, WEAPONS } from '../core/equipment';
-import { TILE } from '../core/dungeon';
+import { buildFlow, TILE, walkable } from '../core/dungeon';
 import { Random, fixed2 } from '../core/random';
 import { THEMES,THEME_IDS } from '../core/themes';
 import {THEME_DESIGNS,type FloorMotif} from '../core/themeDesigns';
@@ -43,6 +43,7 @@ export class GameScene extends Phaser.Scene {
   private drops = new Map<number, Phaser.GameObjects.Image>();
   private xpDrops = new Map<number, Phaser.GameObjects.Image>();
   private dropLabels=new Map<number,Phaser.GameObjects.Text>();
+  private corpseImages=new Map<number,Phaser.GameObjects.Image>();
   private minionImages = new Map<number, Phaser.GameObjects.Image>();
   private pillars: Phaser.GameObjects.Image[] = [];
   private braziers: Vec[] = [];
@@ -73,6 +74,9 @@ export class GameScene extends Phaser.Scene {
   private elapsed = 0;
   private pointerActive = false;
   private pendingActions = new Set<string>();
+  private clickMoveTarget?:Vec;
+  private clickMoveFlow?:Int16Array;
+  private playerMoving=false;
   private hitStop = 0;
   private pendingBuildRevision = -1;
   private rebuilding=false;
@@ -95,6 +99,7 @@ export class GameScene extends Phaser.Scene {
     preloadEffectFirstFrames(this);
     this.load.image('merchant-stall',`${import.meta.env.BASE_URL}assets/effects/merchant-stall.png`);
     this.load.image('equipment-atlas',`${import.meta.env.BASE_URL}assets/equipment/atlas-v4.png`);
+    this.load.spritesheet('corpse-remains',`${import.meta.env.BASE_URL}assets/effects/corpse/corpse-remains-v1.png`,{frameWidth:443,frameHeight:315});
     this.load.on('loaderror', () => this.bridge.onCommand('load-error'));
   }
   create(): void {
@@ -110,21 +115,31 @@ export class GameScene extends Phaser.Scene {
     }
     this.cameras.main.setBackgroundColor('#090d10');
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SPACE,Q,E,R,F,I,ESC,TAB,M', false) as Record<string, Phaser.Input.Keyboard.Key>;
+    this.input.mouse?.disableContextMenu();
     this.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
       if (event.repeat) return;
-      if (this.bridge.started && this.bridge.run.phase === 'playing' && ['Space', 'KeyQ', 'KeyR', 'KeyE'].includes(event.code)) this.pendingActions.add(event.code);
+      if (this.bridge.started && this.bridge.run.phase === 'playing' && ['Space','KeyQ','KeyR','KeyE','Digit1','Digit2','Digit3','Digit4'].includes(event.code)) this.pendingActions.add(event.code);
       const commands: Record<string, string> = { KeyI: 'inventory', KeyF:'pickup',Escape: 'pause', Tab: 'map', KeyM: 'sound' };
       if (this.bridge.started && this.bridge.run.phase === 'playing' && ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(event.code)) event.preventDefault();
       if (event.code === 'Tab' && this.bridge.run.phase !== 'playing') return;
       if (commands[event.code]) this.bridge.onCommand(commands[event.code]);
     });
     this.input.on('pointermove', () => { this.pointerActive = true; });
+    this.input.on('pointerdown',(pointer:Phaser.Input.Pointer)=>{
+      if(!this.bridge.started||this.bridge.run.phase!=='playing')return;this.pointerActive=true;
+      if(pointer.button===0)this.setClickMoveTarget(pointer);else if(pointer.button===2)this.pendingActions.add('PointerRight');
+    });
     this.scale.on('resize', () => this.configureCamera());
     this.rebuilding=true;void this.buildWorld().then(()=>{this.rebuilding=false;this.bridge.onReady();});
   }
   private configureCamera(): void {
     const width = this.scale.width;
     this.cameras.main.setZoom(Math.min(1.25, Math.max(.75, width / 1280)));
+  }
+  private setClickMoveTarget(pointer:Phaser.Input.Pointer):void{
+    const point=unproject(this.cameras.main.getWorldPoint(pointer.x,pointer.y)),map=this.bridge.run.dungeon;
+    let target=point;if(!walkable(map,target.x,target.y,8)){let found:Vec|undefined;for(let radius=1;radius<=5&&!found;radius++)for(let oy=-radius;oy<=radius&&!found;oy++)for(let ox=-radius;ox<=radius;ox++){const candidate={x:(Math.floor(point.x/TILE)+ox+.5)*TILE,y:(Math.floor(point.y/TILE)+oy+.5)*TILE};if(walkable(map,candidate.x,candidate.y,8)){found=candidate;break}}if(!found)return;target=found;}
+    this.clickMoveTarget=target;this.clickMoveFlow=buildFlow(map,target);
   }
   private paintThemeMotif(floor:Phaser.GameObjects.Graphics,c:Vec,motif:FloorMotif,accent:number):void{
     floor.lineStyle(2,accent,.34);floor.fillStyle(accent,.08);
@@ -147,7 +162,7 @@ export class GameScene extends Phaser.Scene {
     for (const o of this.worldObjects) o.destroy(); this.worldObjects = [];
     for (const image of this.entities.values()) image.destroy(); this.entities.clear();
     for (const label of this.enemyLabels.values())label.destroy();this.enemyLabels.clear();
-    for (const image of this.drops.values()) image.destroy(); this.drops.clear();for(const image of this.xpDrops.values())image.destroy();this.xpDrops.clear();
+    for (const image of this.drops.values()) image.destroy(); this.drops.clear();for(const image of this.xpDrops.values())image.destroy();this.xpDrops.clear();for(const image of this.corpseImages.values())image.destroy();this.corpseImages.clear();
     for(const label of this.dropLabels.values())label.destroy();this.dropLabels.clear();
     for (const image of this.minionImages.values()) image.destroy(); this.minionImages.clear();
     for(const death of this.deathSprites)death.image.destroy();this.deathSprites=[];this.npcImages=[];this.wing=undefined;
@@ -276,7 +291,7 @@ export class GameScene extends Phaser.Scene {
     if(run.session.equippedWing&&!this.wing){this.wing=authoredSprite(this,'wing',run.session.equippedWing,p.x,p.y-34,72).setDepth(p.y+8);this.worldObjects.push(this.wing);}
     this.hero = authoredSprite(this,'character',run.characterId,p.x,p.y,88).setDepth(p.y+10); this.worldObjects.push(this.hero);
     for(const id of run.activeNpcs){const location=run.npcPosition(id),np=project(location);if(id==='merchant'){const stall=this.add.image(np.x,np.y-24,'merchant-stall').setOrigin(.5,.72).setDisplaySize(210,150).setDepth(np.y-2);this.worldObjects.push(stall);}const image=authoredSprite(this,'npc',id,np.x,np.y,82).setDepth(np.y);this.worldObjects.push(image);this.npcImages.push({id,image});const source={merchant:'商人',blacksmith:'铁匠',beggar:'乞丐','distant-traveler':'远方旅客'}[id],label=this.add.text(np.x,np.y-88,tr(source),{fontFamily:'serif',fontSize:'12px',color:'#d7b778',stroke:'#090a0b',strokeThickness:4}).setOrigin(.5).setDepth(7000);this.localizedLabels.push({text:label,source});this.worldObjects.push(label);}
-    this.configureCamera(); this.cameras.main.centerOn(p.x, p.y);this.bridge.onLoading(this.bridge.started,96,tr('唤醒怪物与光效…'));
+    this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;this.configureCamera(); this.cameras.main.centerOn(p.x, p.y);this.bridge.onLoading(this.bridge.started,96,tr('唤醒怪物与光效…'));
     this.accumulator = 0;
   }
 
@@ -295,17 +310,26 @@ export class GameScene extends Phaser.Scene {
       const sy = Number(this.keys.S.isDown || this.keys.DOWN.isDown) - Number(this.keys.W.isDown || this.keys.UP.isDown);
       // Translate screen directions into the isometric ground plane.
       input.x = sx / 2 + sy; input.y = sy - sx / 2;
+      if(sx||sy){this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;}
+      else if(this.clickMoveTarget&&this.clickMoveFlow){
+        const p=run.player,target=this.clickMoveTarget;if(Math.hypot(target.x-p.x,target.y-p.y)<14){this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;}
+        else{const tx=Math.floor(p.x/TILE),ty=Math.floor(p.y/TILE),index=ty*run.dungeon.size+tx,current=this.clickMoveFlow[index],steps=[[tx-1,ty],[tx+1,ty],[tx,ty-1],[tx,ty+1]].map(([x,y])=>({x,y,value:this.clickMoveFlow![y*run.dungeon.size+x]})).filter(step=>step.value>=0&&step.value<current).sort((a,b)=>a.value-b.value),next=steps[0];if(!next){this.clickMoveTarget=undefined;this.clickMoveFlow=undefined;}else{const destination=next.value<=1?target:{x:(next.x+.5)*TILE,y:(next.y+.5)*TILE},length=Math.hypot(destination.x-p.x,destination.y-p.y)||1;input.x=(destination.x-p.x)/length;input.y=(destination.y-p.y)/length;}}
+      }
       if (this.pointerActive) { const pointer = this.input.activePointer; const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y); input.aim = unproject(point); }
       // Buffer edge-triggered commands: a short tap between slow frames must not vanish.
       input.dash = this.pendingActions.has('Space');
       input.burst = this.pendingActions.has('KeyQ');
       input.potion = this.pendingActions.has('KeyR');
       input.interact = this.pendingActions.has('KeyE');
+      input.basicAttack=this.pendingActions.has('PointerRight')||this.input.activePointer.rightButtonDown();
+      const manualCode=['Digit1','Digit2','Digit3','Digit4'].findIndex(code=>this.pendingActions.has(code));if(manualCode>=0)input.skillSlot=manualCode;
+      this.playerMoving=Math.hypot(input.x,input.y)>0;
       if(this.hitStop>0)this.hitStop=Math.max(0,this.hitStop-dt);else this.accumulator += dt;
-      while (this.accumulator >= 1 / 60) { run.update(1 / 60, input); this.accumulator -= 1 / 60; this.pendingActions.clear(); input.dash = input.burst = input.potion = input.interact = false; }
+      while (this.accumulator >= 1 / 60) { run.update(1 / 60, input); this.accumulator -= 1 / 60; this.pendingActions.clear(); input.dash = input.burst = input.potion = input.interact = input.basicAttack = false;input.skillSlot=undefined; }
     } else {
       this.accumulator = 0;
       this.pendingActions.clear();
+      this.playerMoving=false;
     }
     if(this.boundRun !== this.bridge.run||this.boundRevision!==this.bridge.run.worldRevision){this.pendingBuildRevision=this.bridge.run.worldRevision;this.bridge.onLoading(true);return;}
     this.renderWorld(dt);
@@ -317,7 +341,7 @@ export class GameScene extends Phaser.Scene {
     const t = this.elapsed;
     if(!this.wing&&run.session.equippedWing){this.wing=authoredSprite(this,'wing',run.session.equippedWing,pos.x,pos.y-34,72).setDepth(pos.y+8);this.worldObjects.push(this.wing);}
     this.hero.setPosition(pos.x,pos.y);
-    const moving = playing && ['W', 'A', 'S', 'D', 'UP', 'DOWN', 'LEFT', 'RIGHT'].some(k => this.keys[k].isDown);
+    const moving = playing&&this.playerMoving;
     // While moving, locomotion owns the facing direction. Attacks still switch
     // animation immediately, but only retarget the sprite after movement stops.
     const facing=!moving&&(player.attackPose>0||player.skillPose>0)&&player.attackFacing?player.attackFacing:player.facing,direction=directionFrame(facing);
@@ -450,6 +474,8 @@ export class GameScene extends Phaser.Scene {
       if(e.basicAttack==='shot')this.warnings.lineBetween(p.x,p.y-28,to.x,to.y);
       else this.warnings.strokeEllipse(p.x,p.y,e.radius*2.8+16,e.radius*1.4+8);
     }
+    const corpseIds=new Set(run.corpses.map(corpse=>corpse.id));for(const[id,image]of this.corpseImages)if(!corpseIds.has(id)){image.destroy();this.corpseImages.delete(id);}
+    for(const corpse of run.corpses){const p=project(corpse),frame=Math.floor((18-corpse.ttl)*3.5+corpse.id)%4,size=corpse.rank==='boss'?145:corpse.rank==='superElite'?122:108;let image=this.corpseImages.get(corpse.id);if(!image){image=this.add.image(p.x,p.y,'corpse-remains',frame).setOrigin(.5,.82);this.corpseImages.set(corpse.id,image);}image.setFrame(frame).setPosition(p.x,p.y+3).setDisplaySize(size,size*315/443).setDepth(p.y-.5).setAlpha(Math.min(1,corpse.ttl*1.5)).setVisible(run.isExplored(corpse));}
     const lootIds = new Set(run.loot.filter(l => l.item).map(l => l.id));
     for (const [id, image] of this.drops) if (!lootIds.has(id)) { image.destroy(); this.drops.delete(id); }
     const xpIds=new Set(run.loot.filter(l=>!l.item&&l.xp>0).map(l=>l.id));for(const[id,image]of this.xpDrops)if(!xpIds.has(id)){image.destroy();this.xpDrops.delete(id);}

@@ -15,7 +15,7 @@ _Current browser demo with its dark isometric, pixel-art-inspired presentation a
 - **Three heroes:** Sorceress, Necromancer, and Blood Knight have unique looks, skills, ultimates, and talent trees. Equipment, inventory, and currency are shared during the current browser session.
 - **Eight-map expeditions:** each run crosses increasingly dangerous procedural maps with 5–15 main rooms, loops, corridors, hidden vaults, breakable walls, encounters, treasure, and guardian arenas. Map eight ends with a giant three-phase final boss.
 - **Fifteen themes:** caves, dungeons, cathedrals, abandoned villages, inferno, mountains, towns, palaces, catacombs, sewers, frozen ruins, swamps, mines, desert temples, and abyssal fortresses have distinct layouts, hazards, encounters, monster pools, and relics.
-- **Build-focused combat:** basic skills attack automatically, while mouse aim influences target priority. Skills have independent ranges, targeting logic, upgrades, and synergies. The player controls positioning, the ultimate, dodge charges, potions, and equipment mechanics.
+- **Automatic or manual casting:** the four regular skills can cycle automatically, or be triggered with 1–4 after disabling autocast. Every slot shows its live cooldown. Mouse aim sets cast direction, with out-of-range targets clamped to the farthest valid point. Right-click performs a mana-free basic attack.
 - **Deep loot:** seven quality tiers, item levels, six affix tiers, prefixes and suffixes, eight weapon families that alter attacks, eight equipment slots, sets, uniques, legendaries, comparisons, loot beams, ground labels, and pickup filters.
 - **Monster ecology:** 60 animated monster sets form melee lines, ranged pressure, ambushes, tanks, and support groups with healing, shields, resurrection, teleportation, surrounds, and status effects.
 - **Long-term progression:** every hero has an independent 18-node talent tree with three six-node branches and three ranks per node. Respecs refund half the invested gold.
@@ -43,8 +43,11 @@ The large sprite library is stored with [Git LFS](https://git-lfs.com/). Install
 
 | Input | Action |
 | --- | --- |
-| WASD / Arrow keys | Move in screen direction |
-| Mouse pointer | Bias automatic targeting toward nearby enemies |
+| Left mouse button | Click the ground to pathfind and move; enabled by default |
+| WASD / Arrow keys | Move in screen direction and cancel the active click route |
+| Right mouse button | Perform a mana-free basic attack toward the pointer |
+| Mouse pointer | Set cast direction; out-of-range casts stop at maximum range |
+| 1–4 | Cast the corresponding regular skill while autocast is disabled |
 | Space | Shadow dodge; two charges, independent of mana |
 | Q | Hero ultimate; costs 40 mana, 8-second cooldown |
 | R | Drink a potion and restore 50% maximum life |
@@ -55,6 +58,8 @@ The large sprite library is stored with [Git LFS](https://git-lfs.com/). Install
 | Tab | Expand or collapse the map |
 | M | Toggle sound |
 | EN / 中 | Switch language immediately |
+
+The autocast switch is available in the pause menu. Corpses remain visible on the ground for a short time, and the Necromancer's Corpse Explosion prioritizes remains near the aimed point.
 
 The current demo targets keyboard-and-mouse desktop play. Full controller, touch, and mobile layouts are not implemented.
 

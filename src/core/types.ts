@@ -64,7 +64,7 @@ export interface EnvironmentProp extends Vec {
   height:number; radius:number; solid:boolean; atlas?:'user-props-1'|'user-props-2';
 }
 export interface Dungeon { size: number; tiles: Uint8Array; rooms: Room[]; start: Vec; exit: Vec; altar: Vec; chests: Vec[]; seed: number; theme: ThemeId; floor: number; bossRoom: number; hiddenRooms:number[]; breakableWalls:BreakableWall[]; mechanisms:Mechanism[]; props:EnvironmentProp[];showcase?:boolean;showcaseRooms?:ShowcaseRoom[] }
-export interface Input { x: number; y: number; aim?: Vec; dash: boolean; burst: boolean; potion: boolean; interact: boolean }
+export interface Input { x: number; y: number; aim?: Vec; dash: boolean; burst: boolean; potion: boolean; interact: boolean; basicAttack?:boolean; skillSlot?:number }
 export interface VisualEvent extends Vec {
   type: 'hit' | 'playerHit' | 'death' | 'lightning' | 'ring' | 'slash' | 'loot' | 'dash' | 'burst' | 'heal' | 'corpse' | 'summon'|'shield'|'teleport'|'revive'|'status'|'execute'|'interrupt'|'cast';
   color: number; amount?: number; critical?: boolean; lethal?:boolean; heavy?:boolean; blocked?:boolean; target?: Vec; radius?: number; impact?: number; artId?:string; facing?:Vec; label?:string;

@@ -44,6 +44,7 @@ function command(action: string): void {
   if (action === 'inventory') run.openInventory();
   if (action === 'pause' || action === 'resume') run.pause();
   if (action === 'amplify') run.amplify = !run.amplify;
+  if(action==='autocast'){run.autoCast=!run.autoCast;run.notify(run.autoCast?'技能自动施法已开启':'技能自动施法已关闭 · 使用 1–4 手动施法','gold');}
   if (run.phase !== 'playing') return;
   if(action==='pickup'){if(!run.pickupNearestItem())run.notify('附近没有可拾取且符合筛选的装备','blue');return;}
   if (action === 'burst') run.burst();

@@ -21,6 +21,20 @@ describe('exploration contracts and facing',()=>{
     for(let i=0;i<4;i++)r.update(1/60,{...idleInput(),aim:{x:far.x,y:far.y}});expect((r as any).pendingCasts[0].targetId).toBe(far.id);
     const n=new Run(4567,'necromancer',freshSession());n.skills.splice(0,n.skills.length,{id:'summon',level:1,branch:null});step(n,.3);expect(n.minions.length).toBeGreaterThan(0);(n as any).cooldowns.summon=0;const before=n.minions.length;step(n,.3);expect(n.minions).toHaveLength(before);expect((n as any).pendingCasts).toHaveLength(0);
   });
+  it('supports manual mouse-directed skills and clamps casts to their maximum range',()=>{
+    const r=make();r.autoCast=false;r.skills.splice(0,r.skills.length,{id:'fire',level:1,branch:null});const origin={...r.player},far={x:origin.x+1000,y:origin.y};
+    step(r,.2);expect(r.zones).toHaveLength(0);r.update(1/60,{...idleInput(),aim:far,skillSlot:0});step(r,.2);
+    expect(r.zones).toHaveLength(1);expect(r.zones[0].x-origin.x).toBeCloseTo(410,1);expect(r.zones[0].y).toBeCloseTo(origin.y,1);expect(r.skillCooldownRemaining('fire')).toBeGreaterThan(0);
+  });
+  it('uses right-click basic attacks without mana and consumes visible corpses at the aimed point',()=>{
+    const fighter=new Run(2233,'bloodknight',freshSession());fighter.skills.length=0;fighter.player.mana=0;const enemy=fighter.spawnEnemy('zombie')!;Object.assign(enemy,{x:fighter.player.x+70,y:fighter.player.y,speed:0,attackCooldown:99});const hp=enemy.hp;
+    fighter.update(1/60,{...idleInput(),basicAttack:true,aim:{x:enemy.x,y:enemy.y}});expect(enemy.hp).toBeLessThan(hp);expect(fighter.player.mana).toBeCloseTo(5/60,5);
+    const necro=new Run(3344,'necromancer',freshSession());necro.autoCast=false;necro.skills.splice(0,necro.skills.length,{id:'corpse',level:1,branch:null});const corpse={id:99001,x:necro.player.x+100,y:necro.player.y,ttl:18};necro.corpses=[corpse];necro.update(1/60,{...idleInput(),skillSlot:0,aim:corpse});step(necro,.2);
+    expect(necro.corpses).toHaveLength(0);expect(necro.events.some(event=>event.type==='corpse')).toBe(true);
+  });
+  it('opens treasure chests without the removed one-shot loot flash',()=>{
+    const r=make(),chest=r.dungeon.chests[0];Object.assign(r.player,chest);r.interact();expect(r.chestsOpened.has(0)).toBe(true);expect(r.events.some(event=>event.type==='loot')).toBe(false);expect(r.loot.some(value=>value.item)).toBe(true);
+  });
   it('locks authored combat rooms, clears their wave and pauses for a meaningful reward',()=>{
     const r=make(),encounter=r.roomEncounters[0],room=r.dungeon.rooms[encounter.room];encounter.totalWaves=1;encounter.choiceReward=true;
     Object.assign(r.player,{x:(room.x+room.w/2)*32,y:(room.y+room.h/2)*32});step(r,.5);
