@@ -82,3 +82,36 @@
 
 .item-card.common{box-shadow:inset 0 0 16px #d4d4d414!important}.item-card.magic{box-shadow:inset 0 0 18px #6b93ff20!important}.item-card.rare{box-shadow:inset 0 0 18px #f0d56b20!important}.item-card.epic{box-shadow:inset 0 0 20px #bb86e826!important}.item-card.set{box-shadow:inset 0 0 20px #79d8782b!important}.item-card.unique{box-shadow:inset 0 0 22px #c7aa7030!important}.item-card.legendary{box-shadow:inset 0 0 24px #f69b4633!important}
 
+/* The generated ornament supplies the HUD surface; live elements remain responsible for values and input. */
+.hud{width:min(1240px,calc(100vw - 12px));height:220px;padding:0;display:block;isolation:isolate;overflow:visible}
+.hud::before{left:-12vw;right:-12vw;height:230px;background:linear-gradient(transparent,#020304d9 44%,#020304 100%)}
+.hud::after{display:block!important;content:'';position:absolute;inset:0;z-index:-1;background:#030405 url('../assets/ui/hud-frame-v1.png') center 36%/100% auto no-repeat!important;border:0!important;clip-path:none!important;box-shadow:none!important;pointer-events:none}
+.hud .orb-group{position:absolute;bottom:0;width:186px;height:210px;z-index:2;text-align:center}
+.hud .life-group{left:12.1%}.hud .mana-group{right:13.7%}
+.hud .orb-mount{position:absolute;left:5px;top:2px;width:176px;height:176px}
+.hud .orb{width:176px;height:176px}
+.hud .orb-label{position:absolute;left:12px;bottom:4px;margin:0;z-index:5}
+.hud .orb-label span{display:none}.hud .orb-label small{font-size:10px;letter-spacing:.14em;color:#b9a57e}
+.hud .orb-value{position:absolute;right:4px;bottom:2px;margin:0;z-index:5;font-size:13px;color:#dec79a}
+.hud .orb-value span{font-size:10px;color:#8e8779}
+.hud .hotbar{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);width:540px;margin:0;padding:0!important;background:none!important;border:0!important;box-shadow:none!important}
+.hud .experience{height:18px;margin:0 17px 6px;gap:7px;font-size:8px}
+.hud .experience>div{height:4px;border-color:#594a32;background:#030405}.hud #xp-label{font-size:8px}
+.hud .skill-slots{width:500px;margin:0 auto;padding:0;grid-template-columns:repeat(6,1fr);gap:10px;background:none!important;border:0!important;outline:0;box-shadow:none}
+.hud .skill-slot{height:70px;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible}
+.hud .skill-slot .asset-icon{width:60px;height:60px}.hud .slot-name{display:none}
+.hud .slot-key{top:auto;bottom:-17px;left:50%;transform:translateX(-50%);padding:0;background:none;font:11px Cinzel,serif;color:#c5ad7e!important}
+.hud .slot-level{top:2px;right:5px;bottom:auto;background:#050607b8;padding:1px 2px}
+.hud .hotbar-bottom{display:none}
+
+@media(max-width:1100px){
+  .topbar .wordmark{font-size:14px;letter-spacing:.1em;gap:7px}.topbar .brand-sigil{font-size:28px}.topbar .build-tag{display:none}
+  .hud{height:176px;width:calc(100vw - 8px)}.hud::before{height:184px}
+  .hud .orb-group{width:145px;height:170px}.hud .life-group{left:11.7%}.hud .mana-group{right:13.2%}
+  .hud .orb-mount{left:4px;top:2px;width:138px;height:138px}.hud .orb{width:138px;height:138px}
+  .hud .orb-label{left:8px;bottom:3px}.hud .orb-value{right:1px;bottom:1px;font-size:11px}.hud .orb-value span{font-size:8px}
+  .hud .hotbar{width:450px;bottom:23px}.hud .experience{margin:0 12px 4px;height:14px}
+  .hud .skill-slots{width:418px;gap:8px}.hud .skill-slot{height:55px}.hud .skill-slot .asset-icon{width:47px;height:47px}
+  .hud .slot-key{bottom:-14px;font-size:9px}
+}
+

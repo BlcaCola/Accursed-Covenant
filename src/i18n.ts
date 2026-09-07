@@ -18,7 +18,7 @@ const phrases:Record<string,string>={
   '雷霆审判':'Storm Judgment','亡者归来':'Return of the Dead','猩红处决':'Crimson Execution','幽影闪避':'Shadow Dash',
   '雷暴共鸣':'Tempest Resonance','霜火禁域':'Frostfire Dominion','秘法棱镜':'Arcane Prism','尸潮统御':'Corpse Dominion','疫病骨矛':'Plague Spear','不死壁垒':'Undying Bastion','旋刃屠场':'Blade Slaughter','血矛回环':'Blood Lance Cycle','铁血处刑':'Ironblood Execution',
   '中毒':'Poisoned','流血':'Bleeding','眩晕':'Stunned','寒冷':'Chilled','诅咒':'Cursed','燃烧':'Burning',
-  '选择你的契约者':'CHOOSE YOUR COVENANT','选择角色':'Choose character','选择此角色':'Choose character','◆ 已选定':'◆ SELECTED','灰 烬 契 约':'ASHBOUND',
+  '选择你的契约者':'CHOOSE YOUR COVENANT','选择角色':'Choose character','选择此角色':'Choose character','◆ 已选定':'◆ SELECTED','诅 咒 契 约':'ACCURSED COVENANT',
   '初始技能与专属技能池':'Starting skills and exclusive skill pool','初始':'STARTING','共用行囊 · 装备与成长跨角色继承':'Shared stash · Gear and progress carry across characters',
   '天赋树':'Talent Tree','正在唤醒圣堂…':'Awakening the sanctuary…','每局可重新选择角色 · 三名角色拥有独立天赋树 · 刷新或关闭页面后清空进度':'Choose a character for every run · Each has a separate talent tree · Refreshing or closing clears all progress',
   '游戏设置':'Game settings','声音开关 [M]':'Sound [M]','关闭音效':'Mute sound','开启音效':'Enable sound','全屏':'Fullscreen','切换全屏':'Toggle fullscreen','暂停 [Esc]':'Pause [Esc]','暂停游戏':'Pause game',

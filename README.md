@@ -1,4 +1,4 @@
-# Accursed Covenant · 灰烬契约
+# Accursed Covenant · 诅咒契约
 
 [简体中文](README.zh_CN.md) · **English**
 
@@ -6,9 +6,9 @@
 
 > Version **0.12.3** · Playable desktop demo · TypeScript + Phaser 3 + Vite
 
-![Accursed Covenant visual direction](public/screenshots/visual-direction.png)
+![Accursed Covenant gameplay](public/screenshots/gameplay.png)
 
-_Original visual direction. The playable demo follows the same dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
+_Current browser demo with its dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
 
 ## Highlights
 

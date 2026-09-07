@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-// Relative assets allow the same dist/ to be hosted at / or /games/ashbound/.
+// Relative assets allow the same dist/ to be hosted at / or /games/accursed-covenant/.
 export default defineConfig({
   base: './',
   build: { target: 'es2022', chunkSizeWarningLimit: 1600 },
