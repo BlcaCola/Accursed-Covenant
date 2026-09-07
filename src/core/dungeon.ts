@@ -59,26 +59,39 @@ export function generateDungeon(seed:number,roomCount=5,theme:ThemeId='cathedral
   // The final room is a sealed side room. Main progression is always connected;
   // the side room becomes reachable only after its cracked wall is destroyed.
   const hiddenRoom=rooms.length-1,mainCount=rooms.length-1;
+  // Build the playable network without the boss room, then attach the boss as
+  // one final leaf. A sealed boss arena can therefore never cut the player off
+  // from an uncleared combat room.
+  const routeRooms=Array.from({length:mainCount},(_,index)=>index).filter(index=>index!==bossCandidate);
   const edges:Array<[number,number]>=[],connected=new Set([0]);
-  while(connected.size<mainCount){let best:[number,number]=[0,1],score=Infinity;
-    for(const a of connected)for(let b=0;b<mainCount;b++)if(!connected.has(b)){
+  while(connected.size<routeRooms.length){let best:[number,number]=[0,routeRooms.find(index=>index!==0)!],score=Infinity;
+    for(const a of connected)for(const b of routeRooms)if(!connected.has(b)){
       const ca=center(rooms[a]),cb=center(rooms[b]),d=Math.abs(ca.x-cb.x)+Math.abs(ca.y-cb.y)+rng.next()*3;
       if(d<score){score=d;best=[a,b]}
     }edges.push(best);connected.add(best[1]);
   }
   const existing=(a:number,b:number)=>edges.some(e=>(e[0]===a&&e[1]===b)||(e[0]===b&&e[1]===a));
   for(let i=0;i<Math.min(1+Math.floor(floor/2),4);i++){
-    const a=rng.int(0,mainCount-1),b=rng.int(0,mainCount-1);if(a!==b&&!existing(a,b))edges.push([a,b]);
+    const a=rng.pick(routeRooms),b=rng.pick(routeRooms);if(a!==b&&!existing(a,b))edges.push([a,b]);
   }
+  let bossParent=routeRooms[0],bossParentDistance=Infinity;for(const index of routeRooms){const a=center(rooms[index]),b=center(rooms[bossCandidate]),distance=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);if(distance<bossParentDistance){bossParent=index;bossParentDistance=distance}}
+  edges.push([bossParent,bossCandidate]);
   let hiddenParent=0,hiddenDistance=Infinity;for(let i=0;i<mainCount;i++){const a=center(rooms[i]),b=center(rooms[hiddenRoom]),d=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);if(d<hiddenDistance){hiddenDistance=d;hiddenParent=i}}
   const corridorRadius=['cave','sewer','mine'].includes(theme)?1:2;
-  const connect=(a:Room,b:Room)=>{const from=center(a),to=center(b),path:Vec[]=[];let{x,y}=from;const horizontalFirst=rng.next()<.5;
-    const stepX=()=>{path.push({x,y});for(let oy=-corridorRadius;oy<=corridorRadius;oy++)carve(x, y+oy);x+=Math.sign(to.x-x)};
-    const stepY=()=>{path.push({x,y});for(let ox=-corridorRadius;ox<=corridorRadius;ox++)carve(x+ox,y);y+=Math.sign(to.y-y)};
-    if(horizontalFirst){while(x!==to.x)stepX();while(y!==to.y)stepY()}else{while(y!==to.y)stepY();while(x!==to.x)stepX()}
-    for(let ox=-corridorRadius;ox<=corridorRadius;ox++)for(let oy=-corridorRadius;oy<=corridorRadius;oy++)carve(x+ox,y+oy);path.push({x,y});return path;
+  const connect=(a:Room,b:Room,avoid?:Room)=>{
+    const from=center(a),to=center(b),path:Vec[]=[];
+    if(avoid){
+      // Find a short tile route around the sealed arena. The avoidance margin
+      // includes corridor width, so carving cannot nick a second boss doorway.
+      const previous=new Int32Array(size*size).fill(-2),queue=new Int32Array(size*size),start=from.y*size+from.x,target=to.y*size+to.x;let head=0,tail=1;queue[0]=start;previous[start]=-1;
+      const blocked=(x:number,y:number)=>x>=avoid.x-corridorRadius&&x<avoid.x+avoid.w+corridorRadius&&y>=avoid.y-corridorRadius&&y<avoid.y+avoid.h+corridorRadius;
+      while(head<tail&&previous[target]===-2){const index=queue[head++],x=index%size,y=Math.floor(index/size);for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){if(nx<=1||ny<=1||nx>=size-2||ny>=size-2||blocked(nx,ny))continue;const next=ny*size+nx;if(previous[next]!==-2)continue;previous[next]=index;queue[tail++]=next;}}
+      if(previous[target]!==-2){for(let index=target;index!==-1;index=previous[index])path.push({x:index%size,y:Math.floor(index/size)});path.reverse();}
+    }
+    if(!path.length){let{x,y}=from;const horizontalFirst=rng.next()<.5;const stepX=()=>{path.push({x,y});x+=Math.sign(to.x-x)},stepY=()=>{path.push({x,y});y+=Math.sign(to.y-y)};if(horizontalFirst){while(x!==to.x)stepX();while(y!==to.y)stepY()}else{while(y!==to.y)stepY();while(x!==to.x)stepX()}path.push({x,y});}
+    for(const point of path)for(let ox=-corridorRadius;ox<=corridorRadius;ox++)for(let oy=-corridorRadius;oy<=corridorRadius;oy++)carve(point.x+ox,point.y+oy);return path;
   };
-  for(const[a,b]of edges)connect(rooms[a],rooms[b]);
+  for(const[a,b]of edges)connect(rooms[a],rooms[b],a===bossCandidate||b===bossCandidate?undefined:rooms[bossCandidate]);
   // More late-game route rooms create more corridors. Clear a two-tile moat
   // around the secret after all main corridors are carved, then rebuild the
   // treasury and its single controlled approach. This guarantees that a

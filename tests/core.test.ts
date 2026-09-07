@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildFlow, generateDungeon, moveOnMap, TILE, walkable } from '../src/core/dungeon';
+import { buildFlow, generateDungeon, moveOnMap, roomsForFloor, TILE, walkable } from '../src/core/dungeon';
 import { Random } from '../src/core/random';
 import { createItem } from '../src/core/loot';
 import { freshSession, idleInput, Run } from '../src/core/run';
@@ -50,6 +50,17 @@ describe('random generation and navigation', () => {
       expect(run.requiredKeyRooms,`seed ${seed}`).toBeGreaterThanOrEqual(2);
       expect(run.roomEncounters.length,`seed ${seed}`).toBeGreaterThanOrEqual(run.requiredKeyRooms);
       unlockBoss(run);expect(run.bossUnlocked,`seed ${seed}`).toBe(true);Object.assign(run.player,run.dungeon.exit);run.update(1/60,idleInput());expect(run.floorGuardian,`seed ${seed}`).toBeDefined();
+    }
+  });
+  it('keeps every ordinary room reachable while the boss arena is sealed',()=>{
+    for(let floor=1;floor<=8;floor++)for(let seed=0;seed<100;seed++){
+      const map=generateDungeon(700000+floor*1000+seed,roomsForFloor(floor),THEME_IDS[(floor+seed)%THEME_IDS.length],floor),boss=map.rooms[map.bossRoom];
+      const blocked=(x:number,y:number)=>x>=boss.x&&x<boss.x+boss.w&&y>=boss.y&&y<boss.y+boss.h;
+      const startX=Math.floor(map.start.x/TILE),startY=Math.floor(map.start.y/TILE),seen=new Uint8Array(map.tiles.length),queue=[startY*map.size+startX];seen[queue[0]]=1;
+      for(let cursor=0;cursor<queue.length;cursor++){const index=queue[cursor],x=index%map.size,y=Math.floor(index/map.size);for(const [nx,ny] of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]){const next=ny*map.size+nx;if(nx>=0&&ny>=0&&nx<map.size&&ny<map.size&&map.tiles[next]&&!blocked(nx,ny)&&!seen[next]){seen[next]=1;queue.push(next)}}}
+      for(const [index,room] of map.rooms.entries())if(index!==map.bossRoom&&!map.hiddenRooms.includes(index)){
+        const x=Math.floor(room.x+room.w/2),y=Math.floor(room.y+room.h/2);expect(seen[y*map.size+x],`floor ${floor}, seed ${seed}, room ${index}`).toBe(1);
+      }
     }
   });
   it('opens sealed rooms through a breakable wall and offers route choices after map two',()=>{

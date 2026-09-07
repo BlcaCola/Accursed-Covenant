@@ -94,11 +94,13 @@
 .hud .orb{width:100%;height:100%;background:transparent!important;mix-blend-mode:normal!important}
 .hud .orb-liquid{left:0;right:0;bottom:0;height:100%!important}
 .hud .orb .glass{inset:0}.hud .orb::after{inset:2%}.hud .orb-shield{inset:0}
-.hud .orb-caption{position:absolute;top:calc(100% - 6px);left:50%;transform:translateX(-50%);display:flex;align-items:baseline;justify-content:center;gap:12px;width:130%;white-space:nowrap;z-index:3}
+.hud .orb-caption{position:absolute;top:calc(100% - 26px);left:40%;transform:translateX(-60%);display:flex;align-items:baseline;justify-content:center;gap:20px;width:130%;white-space:nowrap;z-index:3}
+.hud .life-group .orb-caption { left: 54%; }
+.hud .mana-group .orb-caption { left: 71%; }
 .hud .orb-label{position:static;margin:0}.hud .orb-label span{display:none}.hud .orb-label small{font-size:10px;letter-spacing:.18em;color:#b9a57e}
 .hud .orb-value{position:static;margin:0;font-size:13px;color:#dec79a}.hud .orb-value span{font-size:10px;color:#8e8779}
 .hud .hotbar{position:absolute;z-index:2;inset:0;width:100%;height:100%;margin:0;padding:0!important;transform:none;background:none!important;border:0!important;box-shadow:none!important;pointer-events:none}
-.hud .experience{position:absolute;left:25.385%;top:49.389%;width:49.471%;height:1.467%;margin:0;display:block;font-size:0}
+.hud .experience{position:absolute;left:30%;top:45.5%;width:40%;height:3%;margin:0;display:block;font-size:0}
 .hud .experience>span{position:absolute;z-index:2;top:50%;transform:translateY(-50%);font-size:8px;text-shadow:0 1px 2px #000}.hud #level{left:6px}.hud #xp-label{right:6px;min-width:55px;text-align:right}
 .hud .experience>div{position:absolute;inset:0 64px 0 38px;height:auto;border:0;background:transparent}.hud .experience i{height:100%}
 .hud .skill-slots{position:absolute;left:30.144%;top:56.235%;width:39.712%;height:29.095%;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,13.8%);column-gap:3.44%;background:none!important;border:0!important;outline:0;box-shadow:none;pointer-events:auto}

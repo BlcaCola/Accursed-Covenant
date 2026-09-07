@@ -457,9 +457,15 @@ export class GameScene extends Phaser.Scene {
     for (const l of run.loot) {
       const p = project(l);
       if (l.item) {
-        const color = RARITY_COLORS[l.item.rarity], high=['set','unique','legendary'].includes(l.item.rarity);
+        const color = RARITY_COLORS[l.item.rarity];
         this.ground.fillStyle(color, .12); this.ground.fillEllipse(p.x, p.y, 48, 23);
-        const rarityIndex=Math.max(0,QUALITY_ORDER.indexOf(l.item.rarity)),frameId=`frame-effects/frame-${String(Math.min(7,rarityIndex+1)).padStart(2,'0')}` as EffectAssetId;this.paintAuthoredEffect(frameId,0,this.loopEffectFrame(frameId,t,9,l.id),p.x,p.y-8,high?92:62,high?92:62,high?.86:.58,0,p.y+2);if(high)this.paintAuthoredEffect('frame-effects/frame-10',0,this.loopEffectFrame('frame-effects/frame-10',t,10,l.id),p.x,p.y-42,high?120:80,high?120:80,.65,0,p.y+1);
+        const rarityIndex=Math.max(0,QUALITY_ORDER.indexOf(l.item.rarity));
+        const frameId=`frame-effects/frame-${String(Math.min(7,rarityIndex+1)).padStart(2,'0')}` as EffectAssetId;
+        // One rarity frame per item keeps set, unique and legendary effects from
+        // stacking into an oversized rectangle. Size still rises gently by tier.
+        const effectSize=[54,56,58,61,64,67,70][rarityIndex]??54;
+        const effectAlpha=[.48,.52,.56,.6,.66,.72,.78][rarityIndex]??.48;
+        this.paintAuthoredEffect(frameId,0,this.loopEffectFrame(frameId,t,9,l.id),p.x+5,p.y-8,effectSize,effectSize,effectAlpha,0,p.y+2);
         let image = this.drops.get(l.id); if (!image) {
           const frame=l.item.weaponKind?WEAPONS[l.item.weaponKind].icon:{offhand:8,head:9,chest:10,feet:11,amulet:12,ring1:13,ring2:13,weapon:0}[l.item.slot];
           image=this.add.image(p.x,p.y,'equipment-atlas',String(frame)).setOrigin(.5,.82).setScale(30/(1254/4)).setDepth(p.y+1);this.drops.set(l.id,image);
