@@ -496,13 +496,10 @@ export class GameScene extends Phaser.Scene {
       if (l.item) {
         const color = RARITY_COLORS[l.item.rarity];
         this.ground.fillStyle(color, .12); this.ground.fillEllipse(p.x, p.y, 48, 23);
-        const rarityIndex=Math.max(0,QUALITY_ORDER.indexOf(l.item.rarity));
-        const frameId=`frame-effects/frame-${String(Math.min(7,rarityIndex+1)).padStart(2,'0')}` as EffectAssetId;
-        // One rarity frame per item keeps set, unique and legendary effects from
-        // stacking into an oversized rectangle. Size still rises gently by tier.
-        const effectSize=[54,56,58,61,64,67,70][rarityIndex]??54;
-        const effectAlpha=[.48,.52,.56,.6,.66,.72,.78][rarityIndex]??.48;
-        this.paintAuthoredEffect(frameId,0,this.loopEffectFrame(frameId,t,9,l.id),p.x+5,p.y-8,effectSize,effectSize,effectAlpha,0,p.y+2);
+        const rarityIndex=Math.max(0,QUALITY_ORDER.indexOf(l.item.rarity)),beamHeight=[82,105,132,162,184,208,236][rarityIndex]??82,beamWidth=[28,32,38,44,48,54,62][rarityIndex]??28,beamAlpha=[.38,.48,.58,.68,.72,.78,.86][rarityIndex]??.38;
+        // A single authored blue beam is hue-tinted by rarity. Height, width and
+        // intensity make valuable drops readable before the ground label appears.
+        this.paintAuthoredEffect('blue-glow',0,this.loopEffectFrame('blue-glow',t,10,l.id),p.x,p.y-beamHeight*.48,beamWidth,beamHeight,beamAlpha,0,p.y, true,color);
         let image = this.drops.get(l.id); if (!image) {
           const frame=l.item.weaponKind?WEAPONS[l.item.weaponKind].icon:{offhand:8,head:9,chest:10,feet:11,amulet:12,ring1:13,ring2:13,weapon:0}[l.item.slot];
           image=this.add.image(p.x,p.y,'equipment-atlas',String(frame)).setOrigin(.5,.82).setScale(30/(1254/4)).setDepth(p.y+1);this.drops.set(l.id,image);
@@ -561,10 +558,10 @@ export class GameScene extends Phaser.Scene {
   /** Bounded image pool: code composes the user's transparent effect frames. */
   private loopEffectFrame(id:EffectAssetId,time:number,fps:number,offset=0):number{return Math.floor(time*fps+offset)%EFFECT_MANIFEST[id].frames;}
   private eventEffectFrame(id:EffectAssetId,progress:number):number{return Math.min(EFFECT_MANIFEST[id].frames-1,Math.floor(progress*EFFECT_MANIFEST[id].frames));}
-  private paintAuthoredEffect(id:EffectAssetId,direction:number,frame:number,x:number,y:number,width:number,height:number,alpha:number,rotation=0,depth=5001,additive=true):void{
+  private paintAuthoredEffect(id:EffectAssetId,direction:number,frame:number,x:number,y:number,width:number,height:number,alpha:number,rotation=0,depth=5001,additive=true,tint?:number):void{
     const limit=this.bridge.run.graphicsQuality==='performance'?90:this.bridge.run.graphicsQuality==='standard'?150:220;if(this.authoredTextureCursor>=limit)return;
     let image=this.authoredTextureFx[this.authoredTextureCursor];if(!image){image=this.add.image(x,y,'__WHITE').setOrigin(.5).setVisible(false);this.authoredTextureFx.push(image);}
-    const ready=applyEffectFrame(this,image,id,direction,frame);image.setVisible(ready);if(ready)image.setPosition(x,y).setDisplaySize(width,height).setAlpha(alpha).setRotation(rotation).setDepth(depth).setBlendMode(additive?Phaser.BlendModes.ADD:Phaser.BlendModes.NORMAL).clearTint();this.authoredTextureCursor++;
+    const ready=applyEffectFrame(this,image,id,direction,frame);image.setVisible(ready);if(ready){image.setPosition(x,y).setDisplaySize(width,height).setAlpha(alpha).setRotation(rotation).setDepth(depth).setBlendMode(additive?Phaser.BlendModes.ADD:Phaser.BlendModes.NORMAL).clearTint();if(tint!==undefined)image.setTintFill(tint);}this.authoredTextureCursor++;
   }
   private paintPortal(point:Vec,time:number,alpha:number):void{
     // All three source canvases share a 328 px reference width. Keeping one
@@ -579,7 +576,7 @@ export class GameScene extends Phaser.Scene {
   private hazardEffect(h:{status?:string;sourceName?:string;shape?:string}):EffectAssetId{const source=(h.sourceName??'').toLowerCase();if(source.includes('meteor')||source.includes('陨石'))return'meteor-impact';if(source.includes('rock')||source.includes('boulder')||source.includes('塌'))return'boulder-impact';if(h.status==='poison')return'poison-spread';if(h.status==='burn')return'fire-impact';if(h.status==='curse'||h.shape==='ring')return'red-ground-ring';if(h.shape==='line')return'lightning-strike';return'ground-spikes';}
   private visualEventEffect(event:VisualEvent):EffectAssetId{
     if(event.type==='cast'){const id=event.label??'';if(id.includes('lightning')||id.includes('storm'))return'character-lightning-cast';if(id.includes('fire'))return'character-fire-cast';if(id.includes('poison')||id.includes('arcane')||id.includes('frost'))return'character-blue-cast';if(id.includes('blade')||id.includes('lance'))return'character-shuriken';if(id.includes('blood')||id.includes('cleave'))return'character-diagonal-slash';if(id.includes('shield')||id.includes('warcry'))return'character-shockwave';return'bone-projectile';}
-    if(event.type==='heal'||event.type==='revive')return'character-heal';if(event.type==='corpse'||event.type==='summon'||event.type==='death')return event.type==='death'?'explosion':'emerge';if(event.type==='teleport'||event.type==='dash')return'sparkle';if(event.type==='status')return'poison-cloud';if(event.type==='playerHit')return'character-claw';if(event.type==='slash'||event.type==='execute')return event.heavy?'character-vertical-slash':'character-horizontal-slash';if(event.type==='interrupt')return'great-flash';if(event.type==='burst')return event.radius&&event.radius>180?'dragon-impact':'lightning-ultimate';if(event.type==='shield')return'blue-aura-wheel';if(event.type==='ring')return event.color===0xa7be66?'green-ground-ring':event.color===0xec9a54?'fire-impact':'red-aura-wheel';if(event.type==='loot')return'frame-effects/frame-10';return'character-diagonal-slash';
+    if(event.type==='heal'||event.type==='revive')return'character-heal';if(event.type==='corpse'||event.type==='summon'||event.type==='death')return event.type==='death'?'explosion':'emerge';if(event.type==='teleport'||event.type==='dash')return'sparkle';if(event.type==='status')return'poison-cloud';if(event.type==='playerHit')return'character-claw';if(event.type==='slash'||event.type==='execute')return event.heavy?'character-vertical-slash':'character-horizontal-slash';if(event.type==='interrupt')return'great-flash';if(event.type==='burst')return event.radius&&event.radius>180?'dragon-impact':'lightning-ultimate';if(event.type==='shield')return'blue-aura-wheel';if(event.type==='ring')return event.color===0xa7be66?'green-ground-ring':event.color===0xec9a54?'fire-impact':'red-aura-wheel';if(event.type==='loot')return'blue-glow';return'character-diagonal-slash';
   }
   private eventEffectSize(event:VisualEvent,radius:number):{w:number;h:number}{const directional=EFFECT_MANIFEST[this.visualEventEffect(event)].directions===8,large=event.type==='burst'||event.type==='interrupt';return{w:large?radius*3.5:directional?Math.max(82,radius*3):radius*2.9,h:large?radius*3:directional?Math.max(96,radius*3.3):radius*1.9};}
 

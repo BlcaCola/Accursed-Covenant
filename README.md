@@ -16,7 +16,7 @@ _Current browser demo with its dark isometric, pixel-art-inspired presentation a
 - **Eight-map expeditions:** each run crosses increasingly dangerous procedural maps with 5–15 main rooms, loops, corridors, hidden vaults, breakable walls, encounters, treasure, and guardian arenas. Map eight ends with a giant three-phase final boss.
 - **Fifteen themes:** caves, dungeons, cathedrals, abandoned villages, inferno, mountains, towns, palaces, catacombs, sewers, frozen ruins, swamps, mines, desert temples, and abyssal fortresses have distinct layouts, hazards, encounters, monster pools, and relics.
 - **Automatic or manual casting:** the four regular skills can cycle automatically, or be triggered with 1–4 after disabling autocast. Every slot shows its live cooldown. Mouse aim sets cast direction, with out-of-range targets clamped to the farthest valid point. Right-click performs a mana-free basic attack.
-- **Deep loot:** seven quality tiers, item levels, six affix tiers, prefixes and suffixes, eight weapon families that alter attacks, eight equipment slots, sets, uniques, legendaries, comparisons, loot beams, ground labels, and pickup filters.
+- **Deep loot:** seven quality tiers, item levels, six affix tiers, prefixes and suffixes, eight weapon families that alter attacks, eight equipment slots, sets, uniques, legendaries, Diablo-style hover details and comparisons, animated rarity-colored loot beams, ground labels, and pickup filters.
 - **Monster ecology:** 60 animated monster sets form melee lines, ranged pressure, ambushes, tanks, and support groups with healing, shields, resurrection, teleportation, surrounds, and status effects.
 - **Long-term progression:** every hero has an independent 18-node talent tree with three six-node branches and three ranks per node. Respecs refund half the invested gold.
 - **Camp and events:** progression-aware merchants and smithing, potions, item upgrades, a beggar/traveler investment, cursed chests, blood altars, hunting contracts, and a secret bestiary gallery.
@@ -115,7 +115,7 @@ python scripts/generate-sprite-manifest.py
 python scripts/build_effect_manifest.py
 ```
 
-Actor, environment, and effect assets use separate English-named directories. `frame-effects` is reserved for equipment drops and equipment mechanics.
+Actor, environment, and effect assets use separate English-named directories. Ground equipment uses the animated `blue-glow` sequence with a rarity hue, while `frame-effects` remains reserved for equipment-bound presentation.
 
 ## Development and tests
 
