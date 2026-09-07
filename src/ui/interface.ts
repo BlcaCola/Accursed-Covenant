@@ -54,10 +54,11 @@ export class Interface {
       <div class="quick-compare" id="quick-compare" hidden></div>
       <div class="map-loading" id="map-loading" hidden role="status" aria-live="polite"><div class="loading-rune"><i></i><b>◆</b></div><span class="eyebrow">DESCENDING INTO DARKNESS</span><strong>正在构筑地图</strong><small id="loading-label">解析随机房间与碰撞…</small><div class="loading-progress"><i id="loading-progress"></i></div><b id="loading-percent">0.00%</b></div>
       <footer class="hud" id="hud">
-        <div class="hud-art" aria-hidden="true"><img src="assets/ui/hud-frame-v1.png" alt="" /></div>
+        <div class="hud-art"><img src="assets/ui/hud-frame-v1.png" alt="" aria-hidden="true" />
         <div class="orb-group life-group"><div class="orb-mount"><div class="wing wing-left"></div><div class="wing wing-right"></div><div class="orb life-orb" role="meter" aria-label="生命" aria-valuemin="0" aria-valuemax="100" id="life-meter"><div class="orb-liquid" id="life-liquid"><i></i></div><div class="glass"></div><div class="orb-shield" id="orb-shield"></div></div><span class="mount-jewel">◆</span></div><div class="orb-caption"><div class="orb-label"><span>生命</span><small>LIFE</small></div><div class="orb-value" id="life-value">300 <span>/ 300</span></div></div></div>
         <div class="hotbar"><div class="experience"><span id="level">LV. 1</span><div><i id="xp-fill"></i></div><span id="xp-label">0 / 25</span></div><div class="skill-slots" id="skill-slots"></div><div class="hotbar-bottom"><button data-command="potion" id="potion-button"><kbd>R</kbd> 血瓶 <b>3</b></button><span class="movement-hint"><kbd>W A S D</kbd> 移动</span><button data-command="inventory" id="inventory-button"><kbd>I</kbd> 装备 <b>0</b></button></div></div>
         <div class="orb-group mana-group"><div class="orb-mount"><div class="wing wing-left"></div><div class="wing wing-right"></div><div class="orb mana-orb" role="meter" aria-label="法力" aria-valuemin="0" aria-valuemax="100" id="mana-meter"><div class="orb-liquid" id="mana-liquid"><i></i></div><div class="glass"></div></div><span class="mount-jewel">◆</span></div><div class="orb-caption"><div class="orb-label"><span>法力</span><small>MANA</small></div><div class="orb-value" id="mana-value">100 <span>/ 100</span></div></div></div>
+        </div>
       </footer>
       <div class="modal-layer" id="modal-layer"></div>
       <div class="compact-notice">请使用电脑键盘游玩 · 建议横屏或全屏</div>
