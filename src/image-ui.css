@@ -85,16 +85,16 @@
 /* HUD geometry is measured from the authored alpha bounds: x 31..2111, y 188..540. */
 .hud{width:min(1240px,calc(100vw - 12px));height:245px;padding:0;display:block;isolation:isolate;overflow:visible;background:transparent!important}
 .hud::before,.hud::after{display:none!important}
-.hud-art{position:absolute;z-index:0;left:0;top:0;width:100%;aspect-ratio:2080/352;overflow:hidden;pointer-events:none}
+.hud-art{position:absolute;z-index:1;left:0;top:0;width:100%;aspect-ratio:2080/352;overflow:hidden;pointer-events:none}
 .hud-art img{position:absolute;display:block;width:102.2597%;height:auto;left:-1.4904%;top:-53.4091%;max-width:none}
-.hud .orb-group{position:absolute;z-index:2;top:0;width:18%;height:85.714%;transform:translateX(-50%);text-align:center}
-.hud .life-group{left:19.159%}.hud .mana-group{left:81.034%;right:auto}
-.hud .orb-mount{position:absolute;left:50%;top:14.1%;width:52.083%;height:auto;aspect-ratio:1;transform:translateX(-50%)}
-.hud .mana-group .orb-mount{top:14.67%}
+.hud .orb-group{position:absolute;z-index:0;top:0;width:18%;height:85.714%;transform:translateX(-50%);text-align:center}
+.hud .life-group{left:19.3%}.hud .mana-group{left:81%;right:auto}
+.hud .orb-mount{position:absolute;left:50%;top:5.3%;width:69%;height:auto;aspect-ratio:1;transform:translateX(-50%)}
+.hud .mana-group .orb-mount{top:5%}
 .hud .orb{width:100%;height:100%;background:transparent!important;mix-blend-mode:normal!important}
 .hud .orb-liquid{left:0;right:0;bottom:0;height:100%!important}
 .hud .orb .glass{inset:0}.hud .orb::after{inset:2%}.hud .orb-shield{inset:0}
-.hud .orb-caption{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);display:flex;align-items:baseline;justify-content:center;gap:12px;width:130%;white-space:nowrap;z-index:5}
+.hud .orb-caption{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);display:flex;align-items:baseline;justify-content:center;gap:12px;width:130%;white-space:nowrap;z-index:3}
 .hud .orb-label{position:static;margin:0}.hud .orb-label span{display:none}.hud .orb-label small{font-size:10px;letter-spacing:.18em;color:#b9a57e}
 .hud .orb-value{position:static;margin:0;font-size:13px;color:#dec79a}.hud .orb-value span{font-size:10px;color:#8e8779}
 .hud .hotbar{position:absolute;z-index:2;inset:0;width:100%;height:85.714%;margin:0;padding:0!important;transform:none;background:none!important;border:0!important;box-shadow:none!important;pointer-events:none}
@@ -115,4 +115,3 @@
   .hud .orb-label small{font-size:9px}.hud .orb-value{font-size:11px}.hud .orb-value span{font-size:8px}.hud .orb-caption{gap:8px}
   .hud .slot-key{font-size:9px}.hud .empty-sigil{font-size:19px}
 }
-
