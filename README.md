@@ -4,30 +4,30 @@
 
 **Accursed Covenant** is a single-player gothic action RPG prototype combining roguelite runs, survivor-style combat, procedural dungeons, incremental progression, and Diablo-inspired loot. It runs entirely in the browser and can be hosted as a static website without a game server, database, or engine runtime.
 
-> Version **0.13.0** · Playable desktop demo · TypeScript + Phaser 3 + Vite
+> Version **0.15.0** · Playable desktop demo · TypeScript + Phaser 3 + Vite
 
 ![Accursed Covenant gameplay](public/screenshots/gameplay.png)
 
 _Current browser demo with its dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
 
-## What's new in 0.13.0
+## What's new in 0.15.0
 
-- Added 30 named skill evolutions: each of the 15 regular skills now chooses a level-three identity and unlocks its own level-six apex mechanic.
-- Added build analysis to the inventory and item tooltips, including active skill combinations, matching legendary mechanics, and talent-branch affinity.
-- Reworked isometric walls into individually depth-sorted panels, so actors are covered behind a wall and remain visible after walking in front of it.
-- Improved combat readability with status, healing and block readouts plus off-screen indicators for bosses, super elites, ranged enemies, and supports.
-- Standardized all equipment loot beams to one enlarged, vertically stretched silhouette and brightness; rarity now changes hue only.
+- Rebuilt inventory and equipment as a Diablo-style paper-doll and backpack grid. Full item details now appear only when the item icon is hovered.
+- Made every generated room rectangular, enlarged Black Iron Mine rooms, and reveal an entire room as soon as the player enters it.
+- Moved Q ultimates to the mouse position, clamped by range, and reduced all boss visuals and collision bodies to 70% of their previous scale.
+- Added equipment and coin treasure chests, removed decorative chest reuse, and kept hidden vaults sealed from fog until their wall is broken.
+- Removed the Necromancer Soulfire and Blood Knight Bloodrage meters and their linked bonuses; Elemental Resonance remains Sorceress-specific.
 
 ## Highlights
 
-- **Three heroes:** Sorceress, Necromancer, and Blood Knight have unique looks, skills, ultimates, talent trees, and distinct Elemental Resonance, Soulfire, or Bloodrage combat loops. Equipment, inventory, and currency are shared during the current browser session.
+- **Three heroes:** Sorceress, Necromancer, and Blood Knight have unique looks, skills, ultimates, and talent trees. The Sorceress also builds Elemental Resonance for an empowered cast. Equipment, inventory, and currency are shared during the current browser session.
 - **Weapon and evolution identities:** Eight weapon types use different ranges, cadences, arcs, projectiles, and combo rules. Every one of the 30 skill evolutions has a matching legendary Covenant.
 - **Eight-map expeditions:** each run crosses increasingly dangerous procedural maps with 5–15 main rooms, loops, corridors, hidden vaults, breakable walls, encounters, treasure, and guardian arenas. Map eight ends with a giant three-phase final boss.
 - **Fifteen themes:** caves, dungeons, cathedrals, abandoned villages, inferno, mountains, towns, palaces, catacombs, sewers, frozen ruins, swamps, mines, desert temples, and abyssal fortresses have distinct layouts, hazards, encounters, monster pools, and relics.
 - **Automatic or manual casting:** the four regular skills can cycle automatically, or be triggered with 1–4 after disabling autocast. Every slot shows its live cooldown. Mouse aim sets cast direction, with out-of-range targets clamped to the farthest valid point. Right-click performs a mana-free basic attack.
 - **Thirty skill evolutions:** every regular skill chooses one of two mutually exclusive level-three identities and gains a branch-specific apex effect at level six.
 - **Deep loot:** seven quality tiers, item levels, six affix tiers, prefixes and suffixes, eight weapon families that alter attacks, eight equipment slots, sets, uniques, legendaries, Diablo-style hover details and comparisons, animated rarity-colored loot beams, ground labels, and pickup filters.
-- **Readable build links:** the inventory summarizes active skill combinations, evolved forms, matching item mechanics, and the dominant talent branch; item tooltips explain their current skill and talent synergy.
+- **Readable build links:** item tooltips explain each item's affixes, comparison values, weapon mechanics, and current skill and talent synergy.
 - **Monster ecology:** 60 animated monster sets form melee lines, ranged pressure, ambushes, tanks, and support groups with healing, shields, resurrection, teleportation, surrounds, and status effects.
 - **Long-term progression:** every hero has an independent 18-node talent tree with three six-node branches and three ranks per node. Respecs refund half the invested gold.
 - **Camp and events:** progression-aware merchants and smithing, potions, item upgrades, a beggar/traveler investment, cursed chests, blood altars, hunting contracts, and a secret bestiary gallery.

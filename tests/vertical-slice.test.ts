@@ -3,7 +3,7 @@ import {generateDungeon,TILE,walkable} from '../src/core/dungeon';
 import {freshSession,idleInput,Run} from '../src/core/run';
 
 describe('Demo 0.10 cathedral vertical slice',()=>{
-  it('builds named cruciform cathedral rooms while preserving their centers',()=>{
+  it('builds named rectangular cathedral rooms while preserving their centers',()=>{
     const map=generateDungeon(41010,11,'cathedral',5);
     expect(map.rooms.every(room=>room.archetype)).toBe(true);
     expect(map.rooms[0].archetype).toBe('narthex');
@@ -11,10 +11,7 @@ describe('Demo 0.10 cathedral vertical slice',()=>{
     expect(new Set(map.rooms.map(room=>room.archetype)).size).toBeGreaterThanOrEqual(5);
     for(const room of map.rooms){
       const center={x:(room.x+room.w/2)*TILE,y:(room.y+room.h/2)*TILE};expect(walkable(map,center.x,center.y),room.archetype).toBe(true);
-      if(room.type!=='entry'&&room.type!=='sanctum'){
-        const corners=[[room.x,room.y],[room.x+room.w-1,room.y],[room.x,room.y+room.h-1],[room.x+room.w-1,room.y+room.h-1]];
-        expect(corners.filter(([x,y])=>!map.tiles[y*map.size+x]).length).toBeGreaterThanOrEqual(2);
-      }
+      for(let y=room.y;y<room.y+room.h;y++)for(let x=room.x;x<room.x+room.w;x++)expect(map.tiles[y*map.size+x],`${room.archetype} ${x},${y}`).toBe(1);
     }
   });
   it('uses the same grounded prop anchors for rendering clearance and collision',()=>{

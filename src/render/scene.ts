@@ -296,7 +296,7 @@ export class GameScene extends Phaser.Scene {
     this.worldObjects.push(sprite(this, 14, altar.x, altar.y, 80).setDepth(altar.y));
     const altarSource='贪 欲 祭 坛',altarLabel = this.add.text(altar.x, altar.y - 88, tr(altarSource), { fontFamily: 'serif', fontSize: '12px', color: '#c69b68', stroke: '#101012', strokeThickness: 3 }).setOrigin(.5).setDepth(7000);this.localizedLabels.push({text:altarLabel,source:altarSource});
     this.worldObjects.push(altarLabel);
-    this.chestImages = map.chests.map(c => { const p = project(c), image = sprite(this, 8, p.x, p.y, 45).setDepth(p.y); this.worldObjects.push(image); return image; });
+    this.chestImages = map.chests.map(c => { const p = project(c), image = sprite(this, 8, p.x, p.y, 45).setDepth(p.y);if(c.reward==='gold')image.setTint(0xe1b45c);this.worldObjects.push(image); return image; });
     this.barrierImages=[];
     for(const wall of map.breakableWalls)if(!wall.destroyed){const p=project(wall),left=wall.orientation==='L',key=left?'wall-tiles-l':'wall-tiles-r',frame=left?wallFrameL:wallFrameR,image=this.add.image(p.x,p.y,key,String(frame)).setOrigin(.5,.82).setDisplaySize(155,155).setTint(theme.accent).setDepth(p.y+28);this.worldObjects.push(image);this.barrierImages.push(image);}
     for(const mechanism of map.mechanisms){const p=project(mechanism),frame={spikes:7,flameVent:1,frostVent:1,healingShrine:4,urn:3,ancientLever:6}[mechanism.kind],image=propSprite(this,frame,p.x,p.y,mechanism.kind==='healingShrine'?90:62).setTint(mechanism.kind==='frostVent'?0x91d9ee:mechanism.used?0x555555:0xffffff).setDepth(p.y);this.worldObjects.push(image);}
@@ -456,12 +456,12 @@ export class GameScene extends Phaser.Scene {
     for (const e of run.enemies) {
       if (e.hp <= 0) continue;
       const p = project(e); let image = this.entities.get(e.id),finalBoss=e.rank==='boss'&&e.artId?.startsWith('final/');
-      const enemyHeight=finalBoss?960:e.rank==='boss'?(e.stationary?570:480):e.elite?102:e.kind==='zombie'?72:82;
+      const enemyHeight=finalBoss?672:e.rank==='boss'?(e.stationary?399:336):e.elite?102:e.kind==='zombie'?72:82;
       if(!image){image=e.legacyFrame!==undefined?sprite(this,e.legacyFrame,p.x,p.y,enemyHeight):authoredSprite(this,e.rank==='boss'?'boss':'monster',e.artId??'skeleton',p.x,p.y,enemyHeight);this.entities.set(e.id,image);}
       image.setVisible(run.isExplored(e));
       image.setPosition(p.x,p.y).setDepth(p.y);
       let label=this.enemyLabels.get(e.id);
-      const labelY=p.y-(finalBoss?760:e.rank==='boss'?enemyHeight*.82:112);
+      const labelY=p.y-(finalBoss?532:e.rank==='boss'?enemyHeight*.82:112);
       const enemyLabel=`${e.rank==='superElite'?'◆ 超级精英 · ':e.rank==='boss'?'♜ 首领 · ':'精英 · '}${e.name??'怪物'} · Lv.${e.level??1}`;
       if(e.rank!=='normal'&&!label){label=this.add.text(p.x,labelY,tr(enemyLabel),{fontFamily:'serif',fontSize:finalBoss?'16px':e.rank==='superElite'?'12px':'11px',color:e.rank==='superElite'?'#e79858':'#e4bc78',stroke:'#08090a',strokeThickness:3}).setOrigin(.5).setDepth(6101);this.enemyLabels.set(e.id,label);}
       label?.setText(tr(enemyLabel)).setPosition(p.x,labelY).setVisible(run.isExplored(e));
@@ -476,7 +476,7 @@ export class GameScene extends Phaser.Scene {
       if (e.elite) { this.ground.lineStyle(1.5, e.kind === 'boss' ? 0xc65746 : 0xc79c54, .6); this.ground.strokeEllipse(p.x, p.y, e.radius * 3, e.radius * 1.5); }
       if(e.shield>0){this.ground.lineStyle(2,0x83c9ef,.7);this.ground.strokeEllipse(p.x,p.y,e.radius*3.4,e.radius*1.7);}
       if (e.hp < e.maxHp || e.elite) {
-        const width = finalBoss?240:e.rank==='boss'?130:e.elite ? 42 : 25, y = p.y - (finalBoss?720:e.rank==='boss'?enemyHeight*.75:e.elite ? 99 : 75);
+        const width = finalBoss?168:e.rank==='boss'?91:e.elite ? 42 : 25, y = p.y - (finalBoss?504:e.rank==='boss'?enemyHeight*.75:e.elite ? 99 : 75);
         this.bars.fillStyle(0x080b0d, .85); this.bars.fillRect(p.x - width / 2, y, width, 4);
         this.bars.fillStyle(e.elite ? 0xc0a16d : 0x9f4b42); this.bars.fillRect(p.x - width / 2, y, width * Math.max(0, e.hp / e.maxHp), 3);
       }

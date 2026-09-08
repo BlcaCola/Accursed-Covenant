@@ -110,6 +110,7 @@ export class Run {
   private weaponCombo=0;
   private weaponComboWindow=0;
   private classPower=0;
+  private lastAim?:Vec;
   private damageSource='基础攻击';
   private killsSinceRare=0;
   private interruptedPhases=new Set<number>();
@@ -140,7 +141,7 @@ export class Run {
         state: 'available', remaining: 0, progress: 0,spawnTimer:0,waves:0 };
     });
     this.reveal();
-    this.dungeon.chests.unshift({ x: this.player.x - 125, y: this.player.y + 100 });
+    this.dungeon.chests.unshift({ x: this.player.x - 125, y: this.player.y + 100,reward:'gear',gold:0 });
     this.setupFloorNpcs();
     this.notify('圣堂已经苏醒。移动，击杀，收集灰烬。', 'gold');
   }
@@ -159,7 +160,7 @@ export class Run {
   get statusResistance():number{return Math.min(.75,Object.values(this.equipped).flatMap(i=>i.affixes??[]).filter(a=>a.stat==='statusResist').reduce((n,a)=>n+a.value,0)+talentBonus(this.session,this.characterId,'statusResist'));}
   get eliteDamage():number{return Object.values(this.equipped).flatMap(i=>i.affixes??[]).filter(a=>a.stat==='eliteDamage').reduce((n,a)=>n+a.value,0)+talentBonus(this.session,this.characterId,'eliteDamage');}
   get walletGold():number{return round2(this.gold+this.session.gold);}
-  get classResource(){const labels={sorceress:['元素共鸣','施放技能与暴击积蓄；充满后下一次技能进入元素过载。'],necromancer:['魂火','击杀与消耗遗骸积蓄；充满后强化召唤或尸骸爆破。'],bloodknight:['血怒','攻击与承受伤害积蓄；充满后强化下一次武技并恢复生命。']}[this.characterId];return{name:labels[0],description:labels[1],value:round2(this.classPower),max:100,ready:this.classPower>=100};}
+  get classResource():{name:string;description:string;value:number;max:number;ready:boolean}|null{return this.characterId==='sorceress'?{name:'元素共鸣',description:'施放技能与暴击积蓄；充满后下一次技能进入元素过载。',value:round2(this.classPower),max:100,ready:this.classPower>=100}:null;}
   get activeNpcs():CampNpc[]{const result:CampNpc[]=[];if(this.showcaseMode)return result;if(this.floor===1||this.floor===5)result.push('merchant','blacksmith');if(this.beggarCurrent)result.push('beggar');if(this.floor===this.travelerFloor&&!this.travelerClaimed)result.push('distant-traveler');return result;}
   get showcasePortalPosition():Vec{return this.showcaseMode?this.dungeon.exit:{x:this.dungeon.start.x,y:this.dungeon.start.y+145};}
   dropChanceForRank(rank:Enemy['rank']):number{return Math.min(1,RANK_DROP_CHANCE[rank]*(1+.06*this.greed)*(this.has('treasureHunter')?1.25:1));}
@@ -207,6 +208,7 @@ export class Run {
       p.dashRecharge += dt;
       if (p.dashRecharge >= 3) { p.dashCharges++; p.dashRecharge = 0; }
     }
+    if(input.aim)this.lastAim={...input.aim};
     const stunned=!!p.statuses.stun,moveX=stunned?0:input.x,moveY=stunned?0:input.y,length=Math.hypot(moveX,moveY);
     if (length > 0) p.facing = { x: moveX / length, y: moveY / length };
     if (input.dash&&!stunned && p.dashCharges > 0 && p.dashTime <= 0) {
@@ -226,7 +228,7 @@ export class Run {
     if(lockedRoom&&playerRoom!==lockedRoom.room){Object.assign(p,previous);playerRoom=lockedRoom.room;}
     else if(!this.showcaseMode&&playerRoom===this.dungeon.bossRoom&&!this.bossUnlocked&&!this.guardianSpawned){Object.assign(p,previous);playerRoom=this.dungeon.rooms.findIndex(room=>p.x/TILE>=room.x&&p.x/TILE<room.x+room.w&&p.y/TILE>=room.y&&p.y/TILE<room.y+room.h);if(this.bossSealNotice<=0){this.bossSealNotice=3;this.notify(`首领圣所尚未开启 · 净化关键房间 ${this.clearedKeyRooms}/${this.requiredKeyRooms}`,'red');}}
     if (input.potion) this.drinkPotion();
-    if (input.burst&&!stunned) this.burst();
+    if (input.burst&&!stunned) this.burst(input.aim);
     if (input.interact) { this.interact(); if (this.phase !== 'playing') return; }
     const tile = Math.floor(p.y / TILE) * this.dungeon.size + Math.floor(p.x / TILE);
     if (tile !== this.flowTile) { this.flowTile = tile; if(!this.showcaseMode)this.flow = buildFlow(this.dungeon, p); this.reveal(); }
@@ -318,24 +320,22 @@ export class Run {
   }
 
   private gainClassPower(amount:number):void{
+    if(this.characterId!=='sorceress')return;
     const before=this.classPower;this.classPower=round2(Math.min(100,this.classPower+amount));
-    if(before<100&&this.classPower>=100){this.notify(`${this.classResource.name}已充满 · 下一次核心行动获得强化`,'gold');this.events.push({type:'burst',...this.player,radius:72,color:this.character.color,label:this.classResource.name});}
+    const resource=this.classResource;if(before<100&&this.classPower>=100&&resource){this.notify(`${resource.name}已充满 · 下一次核心行动获得强化`,'gold');this.events.push({type:'burst',...this.player,radius:72,color:this.character.color,label:resource.name});}
   }
   private consumeClassPower(action:SkillId|'basic'):boolean{
-    if(this.classPower<100)return false;
-    const valid=this.characterId==='sorceress'?action!=='basic':this.characterId==='necromancer'?action==='summon'||action==='corpse':true;
-    if(!valid)return false;this.classPower=0;this.notify(`${this.classResource.name}释放`,'gold');return true;
+    const resource=this.classResource;if(!resource||action==='basic'||this.classPower<100)return false;
+    this.classPower=0;this.notify(`${resource.name}释放`,'gold');return true;
   }
-  private classPowerHeal():void{if(this.characterId!=='bloodknight')return;const amount=round2(this.stats.maxHp*.05);this.player.hp=round2(Math.min(this.stats.maxHp,this.player.hp+amount));this.events.push({type:'heal',...this.player,amount,color:0xc95058,label:`+${fixed2(amount)}`});}
 
   /** Right click is a separate, mana-free weapon attack with its own cadence. */
   private basicAttack(aim?:Vec):void{
     if(this.basicAttackCooldown>0)return;
     const p=this.player,weapon=this.equipped.weapon?.weaponKind??(this.characterId==='bloodknight'?'sword':'wand'),profile=WEAPONS[weapon],point=this.aimedPoint(aim,profile.range),angle=Math.atan2(point.y-p.y,point.x-p.x),color=this.character.color;
     this.basicAttackCooldown=Math.max(.2,profile.cadence*(1-this.stats.haste*.45));p.attackPose=.48;p.attackFacing={x:Math.cos(angle),y:Math.sin(angle)};this.damageSource='基础攻击';
-    const classEmpowered=this.consumeClassPower('basic'),comboHeavy=weapon==='sword'&&this.weaponCombo===2;this.weaponCombo=weapon==='sword'?(this.weaponCombo+1)%3:0;this.weaponComboWindow=1.5;
-    const damage=(11+this.level*2.2)*this.stats.damage*profile.damageScale*(comboHeavy?1.45:1)*(classEmpowered?1.4:1);
-    if(classEmpowered)this.classPowerHeal();
+    const comboHeavy=weapon==='sword'&&this.weaponCombo===2;this.weaponCombo=weapon==='sword'?(this.weaponCombo+1)%3:0;this.weaponComboWindow=1.5;
+    const damage=(11+this.level*2.2)*this.stats.damage*profile.damageScale*(comboHeavy?1.45:1);
     if(profile.ranged){this.fireProjectile(p,angle,damage,color,profile.pierce);if(weapon==='wand')this.fireProjectile(p,angle+.07,damage*.58,color,0);this.events.push({type:'cast',...p,target:point,color,facing:p.attackFacing,radius:46});return;}
     const arc=comboHeavy?1.8:profile.arc;this.events.push({type:'slash',...p,target:point,radius:profile.range,color,facing:p.attackFacing,heavy:comboHeavy});
     for(const enemy of this.targets(p,profile.range+25))if(Math.cos(Math.atan2(enemy.y-p.y,enemy.x-p.x)-angle)>Math.cos(arc/2)){this.hit(enemy,damage,color,true,'基础攻击');if(weapon==='dagger'&&enemy.hp>0)this.hit(enemy,damage*.55,color,false,'副手刺击');}
@@ -559,7 +559,7 @@ export class Run {
     const e: Enemy = { id: this.nextId++, ...pos, kind, hp, maxHp: hp, speed: base.speed, radius: base.radius, damage: base.damage, attackCooldown: this.rng.next() * 1.5,
       slow:0,hitFlash:0,elite:ranked,rank,role:profile?.role??'frontline',onHit:profile?.onHit,support:profile?.support,supportCooldown:2+this.rng.next()*3,shield:0,maxShield:0,moving:false,formationAngle:0,dropChance:rankOverride?RANK_DROP_CHANCE[rank]:profile?.dropChance??RANK_DROP_CHANCE[rank],xpMultiplier:rankOverride?(rank==='superElite'?4:rank==='elite'?2:1):profile?.xpMultiplier??(ranked?2:1),revives:0,windup:0,abilityCooldown:2,chargeTime:0,stagger:0,knockback:{x:0,y:0},armor:Math.min(.38,this.greed*.012+(rank==='boss'?.12:rank==='superElite'?.08:rank==='elite'?.04:0)),level,name:profile?.name,attack:profile?.attack??(kind==='archer'?'shot':kind==='cultist'?'meteor':'melee'),tint:profile?.tint,artId:profile?.artId,legacyFrame:profile?.legacyFrame,facing:{x:0,y:1},stationary:'stationary'in(profile??{})?(profile as any).stationary:false,bossId:rank==='boss'?profile?.id:undefined,abilities:'abilities'in(profile??{})?(profile as any).abilities:undefined };
     e.damage=damage;e.speed=(profile?.speed??base.speed)*(this.mapAffixes.includes('狂乱')?1.1:1);
-    if(rank==='boss')e.radius=profile?.artId?.startsWith('final/')?150:70;
+    if(rank==='boss')e.radius=profile?.artId?.startsWith('final/')?105:49;
     this.enemies.push(e); return e;
   }
 
@@ -629,7 +629,7 @@ export class Run {
         break;
       }
       case 'summon':
-        this.raiseMinions(this.desiredMinions(skill)+(relic?.branch==='wide'?1:0)+(classEmpowered?2:0),damage*.6*(classEmpowered?1.2:1),(skill.level===6?20:14)*(this.has('summonerCrown')?1.25:1));
+        this.raiseMinions(this.desiredMinions(skill)+(relic?.branch==='wide'?1:0),damage*.6,(skill.level===6?20:14)*(this.has('summonerCrown')?1.25:1));
         break;
       case 'shield': case 'warcry':
         p.shield = Math.min(150, 25 + skill.level * 12) * (skill.id === 'shield' && this.has('guard') ? 1.4 : 1)*(skill.branch==='focused'?(apex?1.35:1.18):1);
@@ -658,8 +658,7 @@ export class Run {
         break;
       }
       case 'corpse': {
-        let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, (skill.branch === 'wide' ? 5 : 3)+(relic?.branch==='wide'?1:0)+(classEmpowered?2:0));
-        if(this.characterId==='necromancer'&&remains.length)this.gainClassPower(remains.length*5);
+        let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, (skill.branch === 'wide' ? 5 : 3)+(relic?.branch==='wide'?1:0));
         if (!remains.length) remains = [{ id: -1, x: castAim.x, y: castAim.y, ttl: 0 }];
         for (const corpse of remains) { this.explodeCorpse(corpse, damage * 1.3, 95 * width); this.corpses = this.corpses.filter(c => c.id !== corpse.id); }
         if(apex&&skill.branch==='focused')this.explodeCorpse(castAim,damage*.7,70);
@@ -667,8 +666,6 @@ export class Run {
       }
     }
     if(this.characterId==='sorceress')this.gainClassPower(12);
-    if(this.characterId==='bloodknight')this.gainClassPower(9);
-    if(classEmpowered)this.classPowerHeal();
     this.damageSource='基础攻击';
   }
 
@@ -684,12 +681,12 @@ export class Run {
     enemy.knockback = { x: (enemy.x - from.x) / d * force * resistance, y: (enemy.y - from.y) / d * force * resistance };
   }
 
-  private raiseMinions(count: number, damage: number, duration: number): void {
+  private raiseMinions(count: number, damage: number, duration: number, origin:Vec=this.player): void {
     count = Math.min(10, count);
     for (const minion of this.minions.slice(0, count)) { minion.ttl = Math.max(minion.ttl, duration); minion.damage = damage; }
     while (this.minions.length < count) {
       const angle = this.minions.length * Math.PI * 2 / count;
-      const position = { x: this.player.x + Math.cos(angle) * 27, y: this.player.y + Math.sin(angle) * 27 };
+      const position = { x: origin.x + Math.cos(angle) * 27, y: origin.y + Math.sin(angle) * 27 };
       if (!walkable(this.dungeon, position.x, position.y)) Object.assign(position, { x: this.player.x, y: this.player.y });
       this.minions.push({ id: this.nextId++, ...position, ttl: duration, attackCooldown: .2, targetId: null, damage, hitPose: 0 });
       this.events.push({ type: 'summon', ...position, color: 0xa9bd88, radius: 36 });
@@ -740,7 +737,6 @@ export class Run {
     this.telemetry.damageDealt=round2(this.telemetry.damageDealt+amount);this.telemetry.hits++;this.telemetry.criticals+=Number(critical);this.telemetry.largestHit=Math.max(this.telemetry.largestHit,amount);
     this.telemetry.bySource[source]=round2((this.telemetry.bySource[source]??0)+amount);
     if(allowProc&&this.characterId==='sorceress'&&critical)this.gainClassPower(4);
-    if(allowProc&&this.characterId==='bloodknight')this.gainClassPower(3);
     this.events.push({ type: executed?'execute':'hit', x: enemy.x, y: enemy.y, color, amount, critical,lethal,heavy,blocked:absorbed>=amount,impact,label:absorbed>=amount?'格挡':executed?'处决':undefined });
     if(this.bossCast?.enemyId===enemy.id&&!this.interruptedPhases.has(this.bossPhase)&&(critical||amount>=enemy.maxHp*.025)){
       this.interruptedPhases.add(this.bossPhase);this.bossCast=null;this.bossTimer=2.4;enemy.skillPose=0;
@@ -766,7 +762,6 @@ export class Run {
 
   private kill(e: Enemy,source='基础攻击'): void {
     this.kills++;this.telemetry.kills++;
-    if(this.characterId==='necromancer')this.gainClassPower(source==='尸骸爆破'||source==='召唤物'?14:9);
     const roomEncounter=e.encounterRoom===undefined?undefined:this.roomEncounters.find(value=>value.room===e.encounterRoom);if(roomEncounter)roomEncounter.kills++;
     if(e.rank==='normal')this.killsSinceRare++;
     for (const encounter of this.encounters) if (encounter.state === 'active' && encounter.kind === 'hunt' && distance(e, encounter) < 320) encounter.progress++;
@@ -1004,6 +999,9 @@ export class Run {
     for (let y = Math.max(0, ty - 6); y <= Math.min(map.size - 1, ty + 6); y++) for (let x = Math.max(0, tx - 6); x <= Math.min(map.size - 1, tx + 6); x++)
       if ((x - tx) ** 2 + (y - ty) ** 2 <= 36&&!this.sealedHiddenTile(x,y)) this.explored[y * map.size + x] = 1;
     const room = map.rooms.findIndex(r => tx >= r.x && tx < r.x+r.w && ty >= r.y && ty < r.y+r.h);
+    // Crossing a doorway reveals the entire room at once, including its edge
+    // tiles. Sealed hidden rooms still remain completely absent from the map.
+    if(room>=0){const current=map.rooms[room];for(let y=current.y;y<current.y+current.h;y++)for(let x=current.x;x<current.x+current.w;x++)if(!this.sealedHiddenTile(x,y))this.explored[y*map.size+x]=1;}
     if (room >= 0 && !this.discoveredRooms.has(room)) {
       this.discoveredRooms.add(room);
       const specimen=map.showcaseRooms?.find(value=>value.room===room),identity=specimen?{name:`${specimen.label}陈列室`}:map.hiddenRooms.includes(room)?{name:THEME_DESIGNS[map.theme].secretName}:roomIdentity(map.theme,map.rooms[room].type,room);
@@ -1149,7 +1147,6 @@ export class Run {
     const cursed=p.statuses.curse?.duration?1+(p.statuses.curse.potency||.18):1,defense=1-Math.min(.45,talentBonus(this.session,this.characterId,'armor')),final=round2(amount*cursed*defense),absorbed=Math.min(p.shield,final);p.shield=round2(p.shield-absorbed);p.hp=round2(p.hp-(final-absorbed));
     p.invulnerable = .45; this.lastHit = source;
     this.telemetry.damageTaken=round2(this.telemetry.damageTaken+Math.max(0,final-absorbed));
-    if(this.characterId==='bloodknight'&&final>absorbed)this.gainClassPower(Math.min(12,4+(final-absorbed)*.08));
     this.events.push({type:'playerHit',...p,amount:round2(final-absorbed),label:absorbed>=final?'格挡':undefined,color:0xee7072,blocked:absorbed>=final,impact:Math.min(1,.25+final/100)});if(attacker&&this.has('thorns'))this.hit(attacker,round2(final*.18),0xd3b17d,false);
     if(p.hp<=0&&this.showcaseMode){Object.assign(p,this.dungeon.start,{hp:this.stats.maxHp,mana:this.stats.maxMana,shield:0,invulnerable:3,statuses:{}});this.enemies=[];this.projectiles=[];this.hazards=[];this.zones=[];this.notify('陈列回廊重塑了你的躯体','gold');return;}
     if (p.hp <= 0) { p.hp = 0; this.finish('dead'); }
@@ -1160,27 +1157,27 @@ export class Run {
     const before=p.hp;p.potionCharges--; p.potionCooldown = 3; p.hp = Math.min(this.stats.maxHp, p.hp + this.stats.maxHp * (.5+talentBonus(this.session,this.characterId,'potionPower')));
     const restored=round2(p.hp-before);this.events.push({ type: 'heal', ...p,amount:restored,label:`+${fixed2(restored)}`, color: 0xc45f63 }); this.notify('饮下血瓶 · 恢复 50% 生命');
   }
-  burst(): void {
+  burst(aim?:Vec): void {
     const p = this.player;
     if (p.burstCooldown > 0) return;
     if (p.mana < this.burstCost) { this.notify(`法力不足 · ${this.character.burst.name}需要 ${this.burstCost} 法力`, 'blue'); return; }
     p.mana -= this.burstCost; p.burstCooldown = 8;
     p.attackPose = .48;p.skillPose=.65;
-    const target=this.targets(p,330)[0]; if(target){const d=Math.max(1,distance(p,target));p.attackFacing={x:(target.x-p.x)/d,y:(target.y-p.y)/d};}
+    const range=this.characterId==='bloodknight'?230:330,fallback=this.targets(p,range)[0],center=this.aimedPoint(aim??this.lastAim??fallback,range),d=Math.max(1,distance(p,center));p.attackFacing={x:(center.x-p.x)/d,y:(center.y-p.y)/d};
     const damage = (110 + this.level * 12) * this.stats.damage;
-    this.events.push({ type: 'burst', ...p, radius: this.characterId === 'bloodknight' ? 200 : 290, color: this.character.color });
+    this.events.push({ type: 'burst', ...center, radius: this.characterId === 'bloodknight' ? 200 : 290, color: this.character.color });
     if (this.characterId === 'sorceress') {
-      for (const e of this.targets(p, 290)) { this.hit(e, damage, this.character.color); e.slow = 1.5; this.events.push({ type: 'lightning', x: e.x - 20, y: e.y - 160, target: { x: e.x, y: e.y }, color: 0xb4def7 }); }
-      this.projectiles = this.projectiles.filter(b => !b.enemy || distance(b, p) > 290);
+      for (const e of this.targets(center, 290)) { this.hit(e, damage, this.character.color); e.slow = 1.5; this.events.push({ type: 'lightning', x: e.x - 20, y: e.y - 160, target: { x: e.x, y: e.y }, color: 0xb4def7 }); }
+      this.projectiles = this.projectiles.filter(b => !b.enemy || distance(b, center) > 290);
     } else if (this.characterId === 'necromancer') {
-      this.raiseMinions(6, damage * .2, 10);
-      for (const e of this.targets(p, 180)) this.hit(e, damage * .65, this.character.color);
-      const remains = this.corpses.filter(c => distance(c, p) < 300).slice(0, 6);
+      this.raiseMinions(6, damage * .2, 10,center);
+      for (const e of this.targets(center, 180)) this.hit(e, damage * .65, this.character.color);
+      const remains = this.corpses.filter(c => distance(c, center) < 300).slice(0, 6);
       for (const corpse of remains) this.explodeCorpse(corpse, damage * .6, 100);
       this.corpses = this.corpses.filter(c => !remains.includes(c));
     } else {
-      const targets = this.targets(p, 200);
-      for (const e of targets) { this.hit(e, damage * (e.hp / e.maxHp < .5 ? 2 : 1), this.character.color); this.pushEnemy(e, p, 220); }
+      const targets = this.targets(center, 200);
+      for (const e of targets) { this.hit(e, damage * (e.hp / e.maxHp < .5 ? 2 : 1), this.character.color); this.pushEnemy(e, center, 220); }
       p.hp = Math.min(this.stats.maxHp, p.hp + Math.min(60, targets.length * 5));
     }
   }
@@ -1200,7 +1197,7 @@ export class Run {
     if(mechanism>=0){const kind=this.dungeon.mechanisms[mechanism].kind;return{label:kind==='healingShrine'?'触碰复苏神龛':kind==='urn'?'打碎封印陶罐':'拉动远古机关',kind:'mechanism',index:mechanism};}
     if(this.activeRoomEncounter)return null;
     const i = this.dungeon.chests.findIndex((c, index) => !this.chestsOpened.has(index) && distance(c, this.player) < 75);
-    return i < 0 ? null : { label: '开启遗物宝箱', kind: 'chest', index: i };
+    return i < 0 ? null : { label: this.dungeon.chests[i].reward==='gold'?'开启金币宝箱':'开启遗物宝箱', kind: 'chest', index: i };
   }
   interact(): void {
     const action = this.interaction; if (!action) return;
@@ -1224,9 +1221,14 @@ export class Run {
     else if (action.kind === 'altar') this.phase = 'altar';
     else {
       this.chestsOpened.add(action.index);
-      this.dropItem(this.dungeon.chests[action.index], action.index === 0 ? 'epic' : 'legendary', true, action.index === 0,false,false);
-      this.gold += 30; this.player.potionCharges = Math.min(3, this.player.potionCharges + 1);
-      this.notify('遗物宝箱已开启 · 补充一瓶药剂', 'gold');
+      const chest=this.dungeon.chests[action.index];
+      if(chest.reward==='gold'){
+        this.gold+=chest.gold;this.notify(`金币宝箱已开启 · 获得 ${fixed2(chest.gold)} 金币`,'gold');
+      }else{
+        const rarity=action.index===0?'epic':rollRarity(this.rng,true,this.greed,this.floor);
+        this.dropItem(chest,rarity,true,action.index===0,false,false);this.player.potionCharges=Math.min(3,this.player.potionCharges+1);
+        this.notify('遗物宝箱已开启 · 获得装备并补充一瓶药剂','gold');
+      }
     }
   }
   changeGreed(amount: number): void {

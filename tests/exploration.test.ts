@@ -26,6 +26,11 @@ describe('exploration contracts and facing',()=>{
     step(r,.2);expect(r.zones).toHaveLength(0);r.update(1/60,{...idleInput(),aim:far,skillSlot:0});step(r,.2);
     expect(r.zones).toHaveLength(1);expect(r.zones[0].x-origin.x).toBeCloseTo(410,1);expect(r.zones[0].y).toBeCloseTo(origin.y,1);expect(r.skillCooldownRemaining('fire')).toBeGreaterThan(0);
   });
+  it('casts Q at the mouse point and removes non-sorceress class meters',()=>{
+    const r=make(),east=r.spawnEnemy('zombie')!,west=r.spawnEnemy('zombie')!;Object.assign(east,{x:r.player.x+250,y:r.player.y,speed:0,attackCooldown:99,hp:500,maxHp:500});Object.assign(west,{x:r.player.x-250,y:r.player.y,speed:0,attackCooldown:99,hp:500,maxHp:500});
+    r.burst({x:east.x,y:east.y});expect(east.hp).toBeLessThan(500);expect(west.hp).toBe(500);expect(r.events.some(event=>event.type==='burst'&&Math.abs(event.x-east.x)<1)).toBe(true);
+    expect(new Run(1,'necromancer',freshSession()).classResource).toBeNull();expect(new Run(2,'bloodknight',freshSession()).classResource).toBeNull();
+  });
   it('uses right-click basic attacks without mana and consumes visible corpses at the aimed point',()=>{
     const fighter=new Run(2233,'bloodknight',freshSession());fighter.skills.length=0;fighter.player.mana=0;const enemy=fighter.spawnEnemy('zombie')!;Object.assign(enemy,{x:fighter.player.x+70,y:fighter.player.y,speed:0,attackCooldown:99});const hp=enemy.hp;
     fighter.update(1/60,{...idleInput(),basicAttack:true,aim:{x:enemy.x,y:enemy.y}});expect(enemy.hp).toBeLessThan(hp);expect(fighter.player.mana).toBeCloseTo(5/60,5);
@@ -34,6 +39,9 @@ describe('exploration contracts and facing',()=>{
   });
   it('opens treasure chests without the removed one-shot loot flash',()=>{
     const r=make(),chest=r.dungeon.chests[0];Object.assign(r.player,chest);r.interact();expect(r.chestsOpened.has(0)).toBe(true);expect(r.events.some(event=>event.type==='loot')).toBe(false);expect(r.loot.some(value=>value.item)).toBe(true);
+  });
+  it('opens generated coin chests for their authored reward',()=>{
+    const r=make(),index=r.dungeon.chests.findIndex(chest=>chest.reward==='gold'),chest=r.dungeon.chests[index];expect(index).toBeGreaterThan(0);r.encounters.forEach(event=>event.state='failed');r.roomEncounters.forEach(event=>event.state='cleared');Object.assign(r.player,chest);const before=r.gold;r.interact();expect(r.chestsOpened.has(index)).toBe(true);expect(r.gold-before).toBe(chest.gold);expect(r.loot.some(loot=>loot.item&&loot.x===chest.x&&loot.y===chest.y)).toBe(false);
   });
   it('locks authored combat rooms, clears their wave and pauses for a meaningful reward',()=>{
     const r=make(),encounter=r.roomEncounters[0],room=r.dungeon.rooms[encounter.room];encounter.totalWaves=1;encounter.choiceReward=true;
@@ -71,6 +79,10 @@ describe('exploration contracts and facing',()=>{
     Object.assign(r.player,{x:e.x,y:e.y});step(r,.02);
     expect(r.isExplored(e)).toBe(true);expect(r.isExplored(start)).toBe(true);
     expect(r.discoveredRooms.has(e.room)).toBe(true);
+  });
+  it('reveals every floor tile as soon as the player enters a room',()=>{
+    const r=make(),roomIndex=r.roomEncounters[0].room,room=r.dungeon.rooms[roomIndex];Object.assign(r.player,{x:(room.x+room.w/2)*TILE,y:(room.y+room.h/2)*TILE});step(r,.02);
+    for(let y=room.y;y<room.y+room.h;y++)for(let x=room.x;x<room.x+room.w;x++)expect(r.explored[y*r.dungeon.size+x],`${x},${y}`).toBe(1);
   });
   it('sacrifice enforces its health cost and grants only one reward',()=>{
     const r=make(),e=r.encounters.find(e=>e.kind==='sacrifice')!;

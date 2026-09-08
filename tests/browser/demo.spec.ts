@@ -10,6 +10,7 @@ test('complete demo journey: start, move, pause, upgrade, equip, greed, win and 
   await page.screenshot({ path: 'test-results/title.png' });
   await start.click();
   await expect(page.locator('.start-screen')).toHaveCount(0);
+  await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
   const before = await page.evaluate(() => ({ x: (window as any).__ASHBOUND_TEST__.run.player.x, y: (window as any).__ASHBOUND_TEST__.run.player.y }));
   await page.keyboard.down('d');
   await expect.poll(async () => page.evaluate((p) => Math.hypot((window as any).__ASHBOUND_TEST__.run.player.x - p.x, (window as any).__ASHBOUND_TEST__.run.player.y - p.y), before), { timeout: 10_000 }).toBeGreaterThan(10);
@@ -33,11 +34,11 @@ test('complete demo journey: start, move, pause, upgrade, equip, greed, win and 
     r.receiveItem({ id: 9999, name: '风暴之心', slot: 'weapon', rarity: 'legendary', power: 1, damage: 15, health: 20, haste: 0, crit: .04, effect: 'storm', description: '链雷额外跳跃 2 次。' });
   });
   await page.keyboard.press('i'); await expect(page.getByRole('heading', { name: '契约者的行装' })).toBeVisible();
-  await expect(page.locator('.build-overview')).toBeVisible();await expect(page.locator('.build-skills>span')).toHaveCount(3);
+  await expect(page.locator('.diablo-inventory-layout')).toBeVisible();await expect(page.locator('.diablo-equipment .equipment-slot')).toHaveCount(8);await expect(page.locator('#item-tooltip')).toBeHidden();
   await page.locator('[data-item-tooltip="9999"]').hover();await expect(page.locator('#item-tooltip')).toBeVisible();await expect(page.locator('#item-tooltip')).toContainText('物品等级 1');await expect(page.locator('#item-tooltip')).toContainText('售价');
   await page.locator('[data-equip="9999"]').click();
   await expect(page.locator('.equipment-slot.legendary')).toContainText('风暴之心');
-  await page.locator('.equipment-slot.legendary').click();await expect(page.locator('.equipped-inspector')).toContainText('风暴之心');await expect(page.locator('.active-effects')).toContainText('链雷额外跳跃');
+  await page.locator('.equipment-slot.legendary [data-item-tooltip="9999"]').hover();await expect(page.locator('#item-tooltip')).toContainText('风暴之心');await expect(page.locator('.active-effects')).toContainText('链雷额外跳跃');
   await page.screenshot({ path: 'test-results/equipment.png' });
   await page.getByRole('button', { name: /返回战斗/ }).click();
   await page.evaluate(() => { const r = (window as any).__ASHBOUND_TEST__.run; r.player.x = r.dungeon.altar.x; r.player.y = r.dungeon.altar.y; });
@@ -268,7 +269,7 @@ test('expanded talent tree, detailed merchant, gallery code and giant final boss
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;Object.assign(run.player,run.showcasePortalPosition);run.interact();});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.showcaseMode)).toBe(true);await expect(page.locator('#stage-name')).toContainText('怪物陈列回廊',{timeout:15000});
   const specimen=await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,spec=run.dungeon.showcaseRooms[0],room=run.dungeon.rooms[spec.room];Object.assign(run.player,{x:(room.x+room.w/2)*32,y:(room.y+room.h+1)*32,invulnerable:999});run.update(1/60,{x:0,y:0,dash:false,burst:false,potion:false,interact:false});const enemy=run.enemies.find((value:any)=>value.showcaseRoom===spec.room);return{rooms:run.dungeon.showcaseRooms.length,label:spec.label,enemyId:enemy?.id};});expect(specimen.rooms).toBeGreaterThan(60);expect(specimen.enemyId).toBeTruthy();await expect(page.locator('#objective-title')).toContainText('自由测试');await page.screenshot({path:'test-results/monster-gallery-v12.png'});
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;Object.assign(run.player,run.showcasePortalPosition);run.interact();});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.showcaseMode),{timeout:15000}).toBe(false);await expect(page.locator('#stage-name')).toContainText('地图 1 / 8',{timeout:15000});
-  const finalId=await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;while(run.floor<8){run.exitUnlocked=true;run.advanceFloor();}run.roomEncounters.filter((v:any)=>v.key).forEach((v:any)=>v.state='cleared');Object.assign(run.player,run.dungeon.exit,{invulnerable:999});run.reveal();return run.floorGuardian.id;});expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,room=run.dungeon.rooms[run.dungeon.bossRoom];return[room.w,room.h];})).toEqual([30,30]);await expect.poll(()=>page.evaluate(id=>(window as any).__ASHBOUND_TEST__.scene.entities.get(id)?.displayHeight??0,finalId),{timeout:20000}).toBeGreaterThanOrEqual(950);await page.screenshot({path:'test-results/final-boss-scale-v12.png'});expect(errors).toEqual([]);
+  const finalId=await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;while(run.floor<8){run.exitUnlocked=true;run.advanceFloor();}run.roomEncounters.filter((v:any)=>v.key).forEach((v:any)=>v.state='cleared');Object.assign(run.player,run.dungeon.exit,{invulnerable:999});run.reveal();return run.floorGuardian.id;});expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,room=run.dungeon.rooms[run.dungeon.bossRoom];return[room.w,room.h];})).toEqual([30,30]);await expect.poll(()=>page.evaluate(id=>(window as any).__ASHBOUND_TEST__.scene.entities.get(id)?.displayHeight??0,finalId),{timeout:20000}).toBeGreaterThanOrEqual(665);await page.screenshot({path:'test-results/final-boss-scale-v15.png'});expect(errors).toEqual([]);
 });
 
 

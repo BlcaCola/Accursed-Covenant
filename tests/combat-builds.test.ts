@@ -24,8 +24,8 @@ describe('combat build identities',()=>{
     const combat=run as unknown as {cast:(skill:Run['skills'][number])=>void};
     const skill=run.skills[0];
     for(let i=0;i<9;i++)combat.cast(skill);
-    expect(run.classResource.ready).toBe(true);
+    expect(run.classResource?.ready).toBe(true);
     combat.cast(skill);
-    expect(run.classResource.value).toBe(12);
+    expect(run.classResource?.value).toBe(12);
   });
 });

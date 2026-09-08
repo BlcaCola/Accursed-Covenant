@@ -51,6 +51,13 @@ describe('random generation and navigation', () => {
     // separately sealed hidden treasury.
     expect(counts).toEqual([6,7,9,10,12,13,15,16]);
   });
+  it('uses complete rectangles and gives the black iron mine larger rooms',()=>{
+    const mine=generateDungeon(9281,11,'mine',5),ordinary=mine.rooms.filter((_,index)=>index!==mine.bossRoom&&!mine.hiddenRooms.includes(index));
+    expect(mine.size).toBe(138);expect(ordinary.every(room=>room.w>=20&&room.h>=20)).toBe(true);
+    for(const room of mine.rooms)for(let y=room.y;y<room.y+room.h;y++)for(let x=room.x;x<room.x+room.w;x++)expect(mine.tiles[y*mine.size+x]).toBe(1);
+    expect(mine.chests.some(chest=>chest.reward==='gold'&&chest.gold>=20)).toBe(true);
+    expect(mine.chests.every(chest=>chest.reward==='gear'||chest.reward==='gold')).toBe(true);
+  });
   it('always provides enough reachable key rooms to unlock the boss sanctuary',()=>{
     for(let seed=0;seed<100;seed++){
       const run=new Run(500000+seed,'sorceress',freshSession());
@@ -205,7 +212,7 @@ describe('three characters share everything except appearance and skills', () =>
     for (const id of CHARACTER_IDS) {
       const run = make(id); run.player.hp = 200;
       const enemy = run.spawnEnemy('knight', true)!; enemy.x = run.player.x + 80; enemy.y = run.player.y;
-      run.burst(); expect(run.player.mana).toBeGreaterThanOrEqual(60); expect(run.player.burstCooldown).toBe(8);
+      run.burst(enemy); expect(run.player.mana).toBeGreaterThanOrEqual(60); expect(run.player.burstCooldown).toBe(8);
       if (id === 'necromancer') expect(run.minions).toHaveLength(6);
       if (id === 'bloodknight') expect(run.player.hp).toBeGreaterThan(200);
       if (id === 'sorceress') expect(enemy.slow).toBeGreaterThan(0);
