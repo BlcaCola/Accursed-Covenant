@@ -21,6 +21,7 @@ export interface Item {
   originTheme?:ThemeId;
   effect?: 'storm' | 'frost' | 'vampire' | 'corpse' | 'inferno' | 'guard' | 'execute' | 'clarity' | 'bulwark'|'chainNova'|'bloodTrail'|'summonerCrown'|'meteorEcho'|'thorns'|'treasureHunter';
   affixes?:ItemAffix[];
+  evolution?: { skill: SkillId; branch: Exclude<Skill['branch'],null>; name:string; description:string };
   description: string;
 }
 export interface ItemAffix { id:string; name:string; tier:number; value:number; group:'prefix'|'suffix'; stat:'damage'|'health'|'haste'|'crit'|'moveSpeed'|'pickup'|'statusResist'|'eliteDamage' }

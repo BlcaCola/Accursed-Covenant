@@ -3,6 +3,8 @@ import { WEAPONS } from './equipment';
 import { SLOTS } from './catalog';
 import type { Item, Rarity, SkillId, Slot, WeaponKind } from './types';
 import { round2 } from './random';
+import {EVOLUTION_RELICS,type EvolutionRelic} from './buildMechanics';
+import type {SkillBranch} from './evolutions';
 
 const NAMES: Record<Slot, string[]> = {
   weapon: ['守墓人的长剑', '灰烬仪式刃'], offhand: ['沉默骨盾', '裂纹圣典'],
@@ -30,7 +32,7 @@ const AFFIXES=[
 ] as const;
 const AFFIX_COUNT:Record<Rarity,number>={common:0,magic:1,rare:2,epic:3,set:3,unique:4,legendary:4};
 
-export function createItem(rng: Random, id: number, itemLevel: number, rarity: Rarity, preferred?: SkillId, forcedSlot?: Slot, forcedKind?: WeaponKind): Item {
+export function createItem(rng: Random, id: number, itemLevel: number, rarity: Rarity, preferred?: SkillId, forcedSlot?: Slot, forcedKind?: WeaponKind,preferredBranch?:SkillBranch): Item {
   const slot = forcedSlot ?? (rng.next() < .3 ? 'weapon' : rng.pick(SLOTS));
   const level=Math.max(1,Math.round(itemLevel)),quality={common:.62,magic:.82,rare:1,epic:1.22,set:1.28,unique:1.38,legendary:1.48}[rarity];
   const item: Item = {
@@ -48,9 +50,11 @@ export function createItem(rng: Random, id: number, itemLevel: number, rarity: R
   if (rarity === 'magic') item.crit *= .5;
   if (rarity === 'epic') item.haste += .008;
   if (rarity === 'legendary') {
+    const relic:EvolutionRelic|undefined=preferred&&preferredBranch?EVOLUTION_RELICS[preferred][preferredBranch]:undefined;
     const preferredEffect = { lightning: 'storm', summon: 'corpse', fire: 'inferno', shield: 'guard', blood: 'vampire', frost: 'frost', blades: 'vampire', poison: 'frost', arcane: 'frost', stormOrb: 'storm', corpse: 'corpse', bones: 'guard', cleave: 'vampire', warcry: 'guard', lance: 'vampire' }[preferred ?? 'lightning'];
     const template = preferred ? LEGENDARIES.find(i => i.effect === preferredEffect)! : rng.pick(LEGENDARIES);
     Object.assign(item, template);
+    if(relic){item.name=relic.name;item.description=relic.description;item.evolution={skill:relic.skill,branch:relic.branch,name:relic.name,description:relic.description};}
     item.health += 12+level*.35; item.crit += .018;
   }
   if (rarity === 'set') {

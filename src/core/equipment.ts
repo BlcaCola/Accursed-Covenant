@@ -8,15 +8,16 @@ export const RARITY_COLORS: Record<Rarity, number> = {
 };
 export const QUALITY_ORDER: Rarity[] = ['common','magic','rare','epic','set','unique','legendary'];
 export const BASE_NAMES = { normal: '基础', exceptional: '卓越', elite: '精英' };
-export const WEAPONS: Record<WeaponKind, { name: string; damage: number; health: number; haste: number; crit: number; icon: number; mechanic:string }> = {
-  sword: { name: '长剑', damage: 3, health: 10, haste: 0, crit: 0, icon: 0,mechanic:'直接攻击顺劈附近一名敌人，造成 35% 伤害。' },
-  axe: { name: '战斧', damage: 8, health: 0, haste: 0, crit: 0, icon: 1,mechanic:'对生命低于 30% 的普通怪造成 25% 额外伤害。' },
-  mace: { name: '战锤', damage: 3, health: 24, haste: 0, crit: 0, icon: 2,mechanic:'直接攻击有 12% 概率击晕目标 0.65 秒。' },
-  dagger: { name: '匕首', damage: 0, health: 0, haste: .035, crit: .02, icon: 3,mechanic:'暴击后使当前技能剩余冷却缩短 12%。' },
-  spear: { name: '长矛', damage: 4, health: 6, haste: 0, crit: .012, icon: 4,mechanic:'直接攻击贯穿目标，对其后方敌人造成 45% 伤害。' },
-  staff: { name: '法杖', damage: 5, health: 0, haste: .01, crit: 0, icon: 5,mechanic:'每第五次直接攻击释放一次 65% 伤害秘法新星。' },
-  wand: { name: '魔杖', damage: 2, health: 0, haste: .04, crit: 0, icon: 6,mechanic:'直接攻击有 18% 概率弹射一次，造成 50% 伤害。' },
-  bow: { name: '长弓', damage: 2, health: 0, haste: 0, crit: .045, icon: 7,mechanic:'攻击距离提高，并对远处目标造成至多 20% 额外伤害。' },
+export interface WeaponProfile {name:string;damage:number;health:number;haste:number;crit:number;icon:number;mechanic:string;ranged:boolean;range:number;cadence:number;damageScale:number;arc:number;pierce:number}
+export const WEAPONS: Record<WeaponKind, WeaponProfile> = {
+  sword: { name:'长剑',damage:3,health:10,haste:0,crit:0,icon:0,ranged:false,range:120,cadence:.55,damageScale:1,arc:1.25,pierce:0,mechanic:'第三次连续攻击变为重斩；每次攻击顺劈附近一名敌人。' },
+  axe: { name:'战斧',damage:8,health:0,haste:0,crit:0,icon:1,ranged:false,range:125,cadence:.78,damageScale:1.18,arc:1.65,pierce:0,mechanic:'大范围重击；对生命低于 30% 的普通怪造成 25% 额外伤害。' },
+  mace: { name:'战锤',damage:3,health:24,haste:0,crit:0,icon:2,ranged:false,range:118,cadence:.86,damageScale:1.12,arc:1.15,pierce:0,mechanic:'沉重攻击有 24% 概率击晕目标 0.65 秒。' },
+  dagger: { name:'匕首',damage:0,health:0,haste:.035,crit:.02,icon:3,ranged:false,range:105,cadence:.34,damageScale:.78,arc:1,pierce:0,mechanic:'每次攻击追加 55% 伤害的副手刺击；暴击缩短技能冷却 12%。' },
+  spear: { name:'长矛',damage:4,health:6,haste:0,crit:.012,icon:4,ranged:false,range:165,cadence:.62,damageScale:1.05,arc:.75,pierce:0,mechanic:'窄幅远距突刺，贯穿目标并对其后方敌人造成 45% 伤害。' },
+  staff: { name:'法杖',damage:5,health:0,haste:.01,crit:0,icon:5,ranged:true,range:465,cadence:.68,damageScale:1.08,arc:0,pierce:2,mechanic:'发射贯穿法弹；每第五次攻击释放一次 65% 伤害秘法新星。' },
+  wand: { name:'魔杖',damage:2,health:0,haste:.04,crit:0,icon:6,ranged:true,range:430,cadence:.5,damageScale:.86,arc:0,pierce:0,mechanic:'快速发射双生魔弹；直接攻击有 18% 概率弹射一次。' },
+  bow: { name:'长弓',damage:2,health:0,haste:0,crit:.045,icon:7,ranged:true,range:540,cadence:.58,damageScale:1.12,arc:0,pierce:1,mechanic:'远距穿透射击；距离超过 220 时造成 20% 额外伤害。' },
 };
 export const protectedItem = (item: Item): boolean => ['set','unique','legendary'].includes(item.rarity);
 export const watcherPieces = (items: Item[]): number => new Set(items.filter(i => i.setId === 'watcher').map(i => i.slot)).size;

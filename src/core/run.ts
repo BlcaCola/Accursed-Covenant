@@ -4,7 +4,7 @@ import { buildFlow, CAMPAIGN_FLOORS, generateDungeon, moveOnMap, roomsForFloor, 
 import { campaignThemes, THEME_IDS, THEMES } from './themes';
 import { FINAL_BOSSES, MONSTER_DEFINITIONS, RANK_DROP_CHANCE, THEME_BOSSES, THEME_MONSTERS, type MonsterProfile } from './bestiary';
 import { enemyDamageMultiplier, enemyHealthMultiplier, enemyLevel, itemLevelFrom, MAX_GREED } from './difficulty';
-import { protectedItem, QUALITY_ORDER, RARITY_COLORS, rollRarity, setPieces, watcherPieces } from './equipment';
+import { protectedItem, QUALITY_ORDER, RARITY_COLORS, rollRarity, setPieces, watcherPieces, WEAPONS } from './equipment';
 import { createItem, itemValue } from './loot';
 import { clamp, distance, fixed2, Random, round2 } from './random';
 import type { Rarity, CharacterId, Encounter, Corpse, Dungeon, Enemy, EnemyKind, GroundLoot, Hazard, Input, Item, Minion, Phase, Player, Projectile, RoomEncounter, RoomEncounterType, RoomRewardOption, Session, Skill, SkillId, Slot, Stats, ThemeId, Upgrade, Vec, VisualEvent, Zone } from './types';
@@ -13,6 +13,7 @@ import {talentBonus} from './talents';
 import {roomIdentity,THEME_DESIGNS,THEME_RELICS} from './themeDesigns';
 import {generateShowcaseDungeon,SHOWCASE_PROFILES} from './showcase';
 import {SKILL_EVOLUTIONS} from './evolutions';
+import {matchingEvolutionRelic} from './buildMechanics';
 
 export const freshSession = (): Session => ({ gold: 0, forgeRank: 0, carried: {}, stash: [], bestKills: 0, victories: 0, unlockedWings:[], equippedWing:null, lastWingReward:null,talents:{sorceress:{},necromancer:{},bloodknight:{}} });
 export const idleInput = (): Input => ({ x: 0, y: 0, dash: false, burst: false, potion: false, interact: false, basicAttack:false });
@@ -106,6 +107,9 @@ export class Run {
   private basicAttackCooldown=0;
   private themeTimer=12;
   private weaponHits=0;
+  private weaponCombo=0;
+  private weaponComboWindow=0;
+  private classPower=0;
   private damageSource='基础攻击';
   private killsSinceRare=0;
   private interruptedPhases=new Set<number>();
@@ -155,11 +159,12 @@ export class Run {
   get statusResistance():number{return Math.min(.75,Object.values(this.equipped).flatMap(i=>i.affixes??[]).filter(a=>a.stat==='statusResist').reduce((n,a)=>n+a.value,0)+talentBonus(this.session,this.characterId,'statusResist'));}
   get eliteDamage():number{return Object.values(this.equipped).flatMap(i=>i.affixes??[]).filter(a=>a.stat==='eliteDamage').reduce((n,a)=>n+a.value,0)+talentBonus(this.session,this.characterId,'eliteDamage');}
   get walletGold():number{return round2(this.gold+this.session.gold);}
+  get classResource(){const labels={sorceress:['元素共鸣','施放技能与暴击积蓄；充满后下一次技能进入元素过载。'],necromancer:['魂火','击杀与消耗遗骸积蓄；充满后强化召唤或尸骸爆破。'],bloodknight:['血怒','攻击与承受伤害积蓄；充满后强化下一次武技并恢复生命。']}[this.characterId];return{name:labels[0],description:labels[1],value:round2(this.classPower),max:100,ready:this.classPower>=100};}
   get activeNpcs():CampNpc[]{const result:CampNpc[]=[];if(this.showcaseMode)return result;if(this.floor===1||this.floor===5)result.push('merchant','blacksmith');if(this.beggarCurrent)result.push('beggar');if(this.floor===this.travelerFloor&&!this.travelerClaimed)result.push('distant-traveler');return result;}
   get showcasePortalPosition():Vec{return this.showcaseMode?this.dungeon.exit:{x:this.dungeon.start.x,y:this.dungeon.start.y+145};}
   dropChanceForRank(rank:Enemy['rank']):number{return Math.min(1,RANK_DROP_CHANCE[rank]*(1+.06*this.greed)*(this.has('treasureHunter')?1.25:1));}
   get burstCost(): number { return this.has('clarity') ? 32 : 40; }
-  skillCooldownDuration(skill:Skill):number{return round2(SKILLS[skill.id].cooldown*(1-this.stats.haste)*(skill.id==='shield'&&this.has('guard')?.7:1));}
+  skillCooldownDuration(skill:Skill):number{const relic=matchingEvolutionRelic(Object.values(this.equipped),skill);return round2(SKILLS[skill.id].cooldown*(1-this.stats.haste)*(skill.id==='shield'&&this.has('guard')?.7:1)*(relic?.cooldown??1));}
   skillCooldownRemaining(id:SkillId):number{return round2(Math.max(0,this.cooldowns[id]??0));}
   get character() { return CHARACTERS[this.characterId]; }
   get currentBuild(){const learned=new Set(this.skills.map(skill=>skill.id));return this.character.builds.slice().sort((a,b)=>b.skills.filter(id=>learned.has(id)).length-a.skills.filter(id=>learned.has(id)).length)[0];}
@@ -239,7 +244,7 @@ export class Run {
       // Corridors retain light pressure, while rooms own their authored waves.
       if(this.spawnTimer<=0&&!entryGrace&&!this.activeRoomEncounter&&playerRoom<0){this.spawnThemePack(1+Number(this.floor>=5),'normal');this.spawnTimer=Math.max(4.5,8-this.greed*.18);}
     }
-    this.autoTargetTime=Math.max(0,this.autoTargetTime-dt);this.autoCastGap=Math.max(0,this.autoCastGap-dt);this.basicAttackCooldown=Math.max(0,this.basicAttackCooldown-dt);
+    this.autoTargetTime=Math.max(0,this.autoTargetTime-dt);this.autoCastGap=Math.max(0,this.autoCastGap-dt);this.basicAttackCooldown=Math.max(0,this.basicAttackCooldown-dt);this.weaponComboWindow=Math.max(0,this.weaponComboWindow-dt);if(this.weaponComboWindow===0)this.weaponCombo=0;
     if(input.basicAttack&&!stunned)this.basicAttack(input.aim);
     const focus=this.chooseCombatTarget(input.aim);
     for (const pending of this.pendingCasts) pending.delay -= dt;
@@ -312,16 +317,28 @@ export class Run {
     p.attackFacing={x:(point.x-p.x)/d,y:(point.y-p.y)/d};this.cooldowns[skill.id]=this.skillCooldownDuration(skill);
   }
 
+  private gainClassPower(amount:number):void{
+    const before=this.classPower;this.classPower=round2(Math.min(100,this.classPower+amount));
+    if(before<100&&this.classPower>=100){this.notify(`${this.classResource.name}已充满 · 下一次核心行动获得强化`,'gold');this.events.push({type:'burst',...this.player,radius:72,color:this.character.color,label:this.classResource.name});}
+  }
+  private consumeClassPower(action:SkillId|'basic'):boolean{
+    if(this.classPower<100)return false;
+    const valid=this.characterId==='sorceress'?action!=='basic':this.characterId==='necromancer'?action==='summon'||action==='corpse':true;
+    if(!valid)return false;this.classPower=0;this.notify(`${this.classResource.name}释放`,'gold');return true;
+  }
+  private classPowerHeal():void{if(this.characterId!=='bloodknight')return;const amount=round2(this.stats.maxHp*.05);this.player.hp=round2(Math.min(this.stats.maxHp,this.player.hp+amount));this.events.push({type:'heal',...this.player,amount,color:0xc95058,label:`+${fixed2(amount)}`});}
+
   /** Right click is a separate, mana-free weapon attack with its own cadence. */
   private basicAttack(aim?:Vec):void{
     if(this.basicAttackCooldown>0)return;
-    const p=this.player,weapon=this.equipped.weapon?.weaponKind,ranged=weapon?['bow','staff','wand'].includes(weapon):this.characterId!=='bloodknight',range=ranged?450:weapon==='spear'?150:115,point=this.aimedPoint(aim,range),angle=Math.atan2(point.y-p.y,point.x-p.x),color=this.character.color;
-    const cadence={sword:.55,axe:.78,mace:.86,dagger:.34,spear:.62,staff:.68,wand:.5,bow:.58}[weapon??(ranged?'wand':'sword')];
-    this.basicAttackCooldown=Math.max(.2,cadence*(1-this.stats.haste*.45));p.attackPose=.48;p.attackFacing={x:Math.cos(angle),y:Math.sin(angle)};this.damageSource='基础攻击';
-    const damage=(11+this.level*2.2)*this.stats.damage;
-    if(ranged){this.fireProjectile(p,angle,damage,color,weapon==='staff'?2:weapon==='bow'?1:0);this.events.push({type:'cast',...p,target:point,color,facing:p.attackFacing,radius:46});return;}
-    const arc=weapon==='spear'?.9:weapon==='axe'?1.55:1.25;this.events.push({type:'slash',...p,target:point,radius:range,color,facing:p.attackFacing});
-    for(const enemy of this.targets(p,range+25))if(Math.cos(Math.atan2(enemy.y-p.y,enemy.x-p.x)-angle)>Math.cos(arc/2))this.hit(enemy,damage*(weapon==='axe'?1.18:weapon==='mace'?1.12:1),color,true,'基础攻击');
+    const p=this.player,weapon=this.equipped.weapon?.weaponKind??(this.characterId==='bloodknight'?'sword':'wand'),profile=WEAPONS[weapon],point=this.aimedPoint(aim,profile.range),angle=Math.atan2(point.y-p.y,point.x-p.x),color=this.character.color;
+    this.basicAttackCooldown=Math.max(.2,profile.cadence*(1-this.stats.haste*.45));p.attackPose=.48;p.attackFacing={x:Math.cos(angle),y:Math.sin(angle)};this.damageSource='基础攻击';
+    const classEmpowered=this.consumeClassPower('basic'),comboHeavy=weapon==='sword'&&this.weaponCombo===2;this.weaponCombo=weapon==='sword'?(this.weaponCombo+1)%3:0;this.weaponComboWindow=1.5;
+    const damage=(11+this.level*2.2)*this.stats.damage*profile.damageScale*(comboHeavy?1.45:1)*(classEmpowered?1.4:1);
+    if(classEmpowered)this.classPowerHeal();
+    if(profile.ranged){this.fireProjectile(p,angle,damage,color,profile.pierce);if(weapon==='wand')this.fireProjectile(p,angle+.07,damage*.58,color,0);this.events.push({type:'cast',...p,target:point,color,facing:p.attackFacing,radius:46});return;}
+    const arc=comboHeavy?1.8:profile.arc;this.events.push({type:'slash',...p,target:point,radius:profile.range,color,facing:p.attackFacing,heavy:comboHeavy});
+    for(const enemy of this.targets(p,profile.range+25))if(Math.cos(Math.atan2(enemy.y-p.y,enemy.x-p.x)-angle)>Math.cos(arc/2)){this.hit(enemy,damage,color,true,'基础攻击');if(weapon==='dagger'&&enemy.hp>0)this.hit(enemy,damage*.55,color,false,'副手刺击');}
   }
 
   spawnEnemy(kind: EnemyKind, elite = false): Enemy | undefined {
@@ -364,7 +381,7 @@ export class Run {
   buyPotion():boolean{const price=this.shopPrice(38+this.floor*8);if(this.phase!=='merchant'||this.merchantPotionStock<=0||this.player.potionCharges>=3||!this.spendGold(price))return false;this.merchantPotionStock--;this.player.potionCharges++;this.notify('购买血瓶 · 已放入药剂腰带','gold');return true;}
   private locateItem(id:number):Item|undefined{return Object.values(this.equipped).find(item=>item.id===id)??this.inventory.find(item=>item.id===id);}
   smithMatchLevel(id:number):boolean{const item=this.locateItem(id);if(this.phase!=='blacksmith'||!item)return false;const target=Math.max(item.level??item.power,Math.round(this.level+this.floor*1.5)),gain=target-(item.level??item.power);if(gain<=0)return false;const cost=this.shopPrice(45+gain*14);if(!this.spendGold(cost))return false;const factor=1+gain*.035;item.level=item.power=target;item.damage=round2(item.damage*factor);item.health=round2(item.health*factor);item.baseGrade=target>=36?'elite':target>=16?'exceptional':'normal';this.notify(`铁匠调校 · ${item.name}提升至 ${target} 级`,'gold');return true;}
-  smithImproveQuality(id:number):boolean{const item=this.locateItem(id);if(this.phase!=='blacksmith'||!item)return false;const current=QUALITY_ORDER.indexOf(item.rarity),cap=this.greed<10?QUALITY_ORDER.indexOf('rare'):QUALITY_ORDER.length-1;if(current<0||current>=cap)return false;const cost=this.shopPrice(100+(current+1)*75+(item.level??1)*4);if(!this.spendGold(cost))return false;const rarity=QUALITY_ORDER[current+1],improved=createItem(this.rng,item.id,item.level??item.power,rarity,undefined,item.slot,item.weaponKind);Object.assign(item,improved,{id:item.id});this.notify(`铁匠升品 · ${item.name}成为${rarity}`,'gold');return true;}
+  smithImproveQuality(id:number):boolean{const item=this.locateItem(id);if(this.phase!=='blacksmith'||!item)return false;const current=QUALITY_ORDER.indexOf(item.rarity),cap=this.greed<10?QUALITY_ORDER.indexOf('rare'):QUALITY_ORDER.length-1;if(current<0||current>=cap)return false;const cost=this.shopPrice(100+(current+1)*75+(item.level??1)*4);if(!this.spendGold(cost))return false;const rarity=QUALITY_ORDER[current+1],improved=createItem(this.rng,item.id,item.level??item.power,rarity,item.evolution?.skill,item.slot,item.weaponKind,item.evolution?.branch);Object.assign(item,improved,{id:item.id});this.notify(`铁匠升品 · ${item.name}成为${rarity}`,'gold');return true;}
   payBeggar():boolean{if(this.phase!=='beggar'||!this.beggarCurrent)return false;const payment=Math.floor(this.walletGold/2);if(payment<=0)return false;this.spendGold(payment);this.beggarPayment=payment;this.beggarPaid=true;this.travelerFloor=this.floor+1;this.beggarCurrent=false;this.phase='playing';this.notify(`你交给乞丐 ${round2(payment)} 金币。他答应在下一道门后偿还。`,'gold');this.worldRevision++;return true;}
   claimTraveler():boolean{if(this.phase!=='traveler'||this.floor!==this.travelerFloor||this.travelerClaimed)return false;const reward=this.beggarPayment*3;this.gold=round2(this.gold+reward);this.travelerClaimed=true;this.phase='playing';this.notify(`远方旅客履约 · 归还 ${round2(reward)} 金币`,'gold');this.worldRevision++;return true;}
   private spawnThemePack(count:number,rank:'normal'|'elite'|'superElite'):Enemy[]{
@@ -552,16 +569,17 @@ export class Run {
     const nearby = this.targets(p,this.skillRange(skill.id)).sort((a, b) => distance(a,castAim) - distance(b,castAim));
     const enhanced = this.amplify && p.mana >= 52;
     if (enhanced) p.mana -= 12; // Always reserve 40 mana for the player's manual burst.
-    const apex=skill.level===6,damage = (18 + skill.level * 9) * this.stats.damage * (enhanced ? 1.3 : 1) * (skill.branch === 'focused' ? 1.35 : 1) * (apex ? 1.4 : 1);
+    const relic=matchingEvolutionRelic(Object.values(this.equipped),skill),classEmpowered=this.consumeClassPower(skill.id);
+    const apex=skill.level===6,damage = (18 + skill.level * 9) * this.stats.damage * (enhanced ? 1.3 : 1) * (skill.branch === 'focused' ? 1.35 : 1) * (apex ? 1.4 : 1)*(relic?.damage??1)*(classEmpowered?1.4:1);
     this.damageSource=SKILLS[skill.id].name;
-    const width = skill.branch === 'wide' ? 1.3 : 1;
+    const width = (skill.branch === 'wide' ? 1.3 : 1)*(relic?.area??1)*(classEmpowered&&this.characterId==='sorceress'?1.15:1);
     this.events.push({type:'cast',...p,color,facing:p.attackFacing??p.facing,label:skill.id,radius:75});
     switch (skill.id) {
       case 'lightning': {
-        if(!nearby.length)return;
+        if(!nearby.length)break;
         let from: Vec = p;
         const hit = new Set<number>();
-        const jumps=3+Math.floor(skill.level/2)+(this.has('storm')?2:0)+(skill.branch==='wide'?2+(apex?3:0):0)+(setPieces(Object.values(this.equipped),'tempest')>=3?2:0);
+        const jumps=3+Math.floor(skill.level/2)+(this.has('storm')?2:0)+(skill.branch==='wide'?2+(apex?3:0):0)+(setPieces(Object.values(this.equipped),'tempest')>=3?2:0)+(relic?.branch==='wide'?1:0);
         let refunds = 0;
         for (let j = 0; j < jumps; j++) {
           const next = (j===0?nearby:this.targets(from,270)).filter(e => !hit.has(e.id)).sort((a, b) => distance(a,j===0?castAim:from)-distance(b,j===0?castAim:from))[0];
@@ -596,7 +614,7 @@ export class Run {
       case 'fire': case 'poison': case 'stormOrb': {
         const center = castAim;
         const radius = (skill.id === 'fire' ? 85 : 100) * width * (skill.id === 'fire' && this.has('inferno') ? 1.4 : 1);
-        this.zones.push({ id: this.nextId++, x: center.x, y: center.y, radius, ttl: 3 + (skill.id === 'fire' && this.has('inferno') ? 2 : 0), tick: 0, damage: damage * .48, color,sourceName:SKILLS[skill.id].name });
+        this.zones.push({ id: this.nextId++, x: center.x, y: center.y, radius, ttl: 3 + (skill.id === 'fire' && this.has('inferno') ? 2 : 0)+(relic?.branch==='wide'?1:0), tick: 0, damage: damage * .48, color,sourceName:SKILLS[skill.id].name });
         if(skill.id==='fire'&&this.has('meteorEcho')&&this.rng.next()<.25)this.zones.push({id:this.nextId++,x:center.x+this.rng.int(-80,80),y:center.y+this.rng.int(-80,80),radius:radius*.72,ttl:2.5,tick:0,damage:round2(damage*.4),color});
         this.events.push({ type: 'ring', x: center.x, y: center.y, radius, color });
         if(apex&&skill.branch==='focused')for(const e of this.targets(center,radius))this.hit(e,damage*.8,color);
@@ -611,7 +629,7 @@ export class Run {
         break;
       }
       case 'summon':
-        this.raiseMinions(this.desiredMinions(skill),damage*.6,(skill.level===6?20:14)*(this.has('summonerCrown')?1.25:1));
+        this.raiseMinions(this.desiredMinions(skill)+(relic?.branch==='wide'?1:0)+(classEmpowered?2:0),damage*.6*(classEmpowered?1.2:1),(skill.level===6?20:14)*(this.has('summonerCrown')?1.25:1));
         break;
       case 'shield': case 'warcry':
         p.shield = Math.min(150, 25 + skill.level * 12) * (skill.id === 'shield' && this.has('guard') ? 1.4 : 1)*(skill.branch==='focused'?(apex?1.35:1.18):1);
@@ -620,7 +638,7 @@ export class Run {
         if(apex&&skill.branch==='wide'){this.zones.push({id:this.nextId++,...p,radius:(skill.id==='warcry'?125:90)*width,ttl:1.8,tick:.35,damage:damage*.22,color,sourceName:SKILLS[skill.id].name});}
         break;
       case 'arcane': {
-        const a = Math.atan2(castAim.y-p.y,castAim.x-p.x), count = 3 + (skill.branch === 'wide' ? 2 : 0) + (skill.level === 6 ? 2 : 0);
+        const a = Math.atan2(castAim.y-p.y,castAim.x-p.x), count = 3 + (skill.branch === 'wide' ? 2 : 0) + (skill.level === 6 ? 2 : 0)+(relic?.branch==='wide'?1:0);
         for (let i = 0; i < count; i++) this.fireProjectile(p, a + (i - (count - 1) / 2) * .12, damage * .65, color, skill.branch === 'focused' ? 4 : 1);
         if(apex&&skill.branch==='focused')this.fireProjectile(p,a,damage*.7,color,5);
         break;
@@ -640,13 +658,17 @@ export class Run {
         break;
       }
       case 'corpse': {
-        let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, skill.branch === 'wide' ? 5 : 3);
+        let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, (skill.branch === 'wide' ? 5 : 3)+(relic?.branch==='wide'?1:0)+(classEmpowered?2:0));
+        if(this.characterId==='necromancer'&&remains.length)this.gainClassPower(remains.length*5);
         if (!remains.length) remains = [{ id: -1, x: castAim.x, y: castAim.y, ttl: 0 }];
         for (const corpse of remains) { this.explodeCorpse(corpse, damage * 1.3, 95 * width); this.corpses = this.corpses.filter(c => c.id !== corpse.id); }
         if(apex&&skill.branch==='focused')this.explodeCorpse(castAim,damage*.7,70);
         break;
       }
     }
+    if(this.characterId==='sorceress')this.gainClassPower(12);
+    if(this.characterId==='bloodknight')this.gainClassPower(9);
+    if(classEmpowered)this.classPowerHeal();
     this.damageSource='基础攻击';
   }
 
@@ -663,7 +685,7 @@ export class Run {
   }
 
   private raiseMinions(count: number, damage: number, duration: number): void {
-    count = Math.min(this.has('summonerCrown')?8:6, count);
+    count = Math.min(10, count);
     for (const minion of this.minions.slice(0, count)) { minion.ttl = Math.max(minion.ttl, duration); minion.damage = damage; }
     while (this.minions.length < count) {
       const angle = this.minions.length * Math.PI * 2 / count;
@@ -717,6 +739,8 @@ export class Run {
     const lethal=enemy.hp<=0,executed=lethal&&enemy.elite&&enemy.hp+amount<=enemy.maxHp*.3,heavy=critical||amount>=enemy.maxHp*.12,impact=Math.min(1,.12+amount/150+(critical ? .24 : 0)+(lethal ? .28 : 0));
     this.telemetry.damageDealt=round2(this.telemetry.damageDealt+amount);this.telemetry.hits++;this.telemetry.criticals+=Number(critical);this.telemetry.largestHit=Math.max(this.telemetry.largestHit,amount);
     this.telemetry.bySource[source]=round2((this.telemetry.bySource[source]??0)+amount);
+    if(allowProc&&this.characterId==='sorceress'&&critical)this.gainClassPower(4);
+    if(allowProc&&this.characterId==='bloodknight')this.gainClassPower(3);
     this.events.push({ type: executed?'execute':'hit', x: enemy.x, y: enemy.y, color, amount, critical,lethal,heavy,blocked:absorbed>=amount,impact,label:absorbed>=amount?'格挡':executed?'处决':undefined });
     if(this.bossCast?.enemyId===enemy.id&&!this.interruptedPhases.has(this.bossPhase)&&(critical||amount>=enemy.maxHp*.025)){
       this.interruptedPhases.add(this.bossPhase);this.bossCast=null;this.bossTimer=2.4;enemy.skillPose=0;
@@ -728,7 +752,7 @@ export class Run {
     const healed=round2(this.player.hp-hpBefore);if(healed>0)this.events.push({type:'heal',...this.player,amount:healed,label:`+${fixed2(healed)}`,color:0x75d99a});
     if(allowProc&&weapon){
       this.weaponHits++;
-      if(weapon==='mace'&&this.rng.next()<.12)enemy.stagger=Math.max(enemy.stagger,.65);
+      if(weapon==='mace'&&this.rng.next()<.24)enemy.stagger=Math.max(enemy.stagger,.65);
       if(weapon==='dagger'&&critical)for(const skill of Object.keys(this.cooldowns) as SkillId[])this.cooldowns[skill]=round2(Math.max(0,(this.cooldowns[skill]??0)*.88));
       const others=this.targets(enemy,145).filter(other=>other.id!==enemy.id);
       if(weapon==='sword'&&others[0])this.hit(others[0],amount*.35,color,false);
@@ -736,12 +760,13 @@ export class Run {
       if(weapon==='spear'){const fx=enemy.x-this.player.x,fy=enemy.y-this.player.y,len=Math.hypot(fx,fy)||1,target=others.find(other=>((other.x-enemy.x)*fx+(other.y-enemy.y)*fy)/len>25);if(target)this.hit(target,amount*.45,color,false);}
       if((weapon==='staff'&&this.weaponHits%5===0)||(this.has('chainNova')&&this.weaponHits%5===0)){for(const other of others.slice(0,6))this.hit(other,amount*.65,0xb69bea,false);this.events.push({type:'ring',...enemy,radius:145,color:0xb69bea});}
     }
-    if (enemy.hp <= 0) this.kill(enemy);
+    if (enemy.hp <= 0) this.kill(enemy,source);
     return critical;
   }
 
-  private kill(e: Enemy): void {
+  private kill(e: Enemy,source='基础攻击'): void {
     this.kills++;this.telemetry.kills++;
+    if(this.characterId==='necromancer')this.gainClassPower(source==='尸骸爆破'||source==='召唤物'?14:9);
     const roomEncounter=e.encounterRoom===undefined?undefined:this.roomEncounters.find(value=>value.room===e.encounterRoom);if(roomEncounter)roomEncounter.kills++;
     if(e.rank==='normal')this.killsSinceRare++;
     for (const encounter of this.encounters) if (encounter.state === 'active' && encounter.kind === 'hunt' && distance(e, encounter) < 320) encounter.progress++;
@@ -774,7 +799,9 @@ export class Run {
     if(this.greed<10&&QUALITY_ORDER.indexOf(rarity)>QUALITY_ORDER.indexOf('rare'))rarity='rare';
     const sourceLevel='level'in pos&&typeof pos.level==='number'?pos.level:this.recommendedEnemyLevel;
     const itemLevel=itemLevelFrom(sourceLevel,this.floor,this.greed,this.rng.next())+(this.mapAffixes.includes('丰饶')?3:0);
-    const item = createItem(this.rng, this.nextId++, itemLevel, rarity, match ? this.skills[0].id : undefined, weapon ? 'weapon' : undefined);
+    const evolvedSkills=this.skills.filter(skill=>skill.branch!==null),evolved=evolvedSkills.length?this.rng.pick(evolvedSkills):undefined;
+    const preferred=match?(evolved??this.rng.pick(this.skills)):undefined;
+    const item = createItem(this.rng, this.nextId++, itemLevel, rarity, preferred?.id, weapon ? 'weapon' : undefined,undefined,preferred?.branch??undefined);
     if(themeRelic){item.name=THEME_RELICS[this.dungeon.theme][(this.seed+this.floor)%2];item.originTheme=this.dungeon.theme;item.description=`${this.theme.name}专属遗物 · ${item.description}`;}
     this.loot.push({ id: this.nextId++, x: pos.x, y: pos.y,spawnX:pos.x,spawnY:pos.y, item, xp: 0, gold: 0, age: 0 });
     if (rarity === 'legendary') { this.legendaryFound++; this.notify(`传奇现世 · ${item.name}`, 'gold'); }
@@ -1122,6 +1149,7 @@ export class Run {
     const cursed=p.statuses.curse?.duration?1+(p.statuses.curse.potency||.18):1,defense=1-Math.min(.45,talentBonus(this.session,this.characterId,'armor')),final=round2(amount*cursed*defense),absorbed=Math.min(p.shield,final);p.shield=round2(p.shield-absorbed);p.hp=round2(p.hp-(final-absorbed));
     p.invulnerable = .45; this.lastHit = source;
     this.telemetry.damageTaken=round2(this.telemetry.damageTaken+Math.max(0,final-absorbed));
+    if(this.characterId==='bloodknight'&&final>absorbed)this.gainClassPower(Math.min(12,4+(final-absorbed)*.08));
     this.events.push({type:'playerHit',...p,amount:round2(final-absorbed),label:absorbed>=final?'格挡':undefined,color:0xee7072,blocked:absorbed>=final,impact:Math.min(1,.25+final/100)});if(attacker&&this.has('thorns'))this.hit(attacker,round2(final*.18),0xd3b17d,false);
     if(p.hp<=0&&this.showcaseMode){Object.assign(p,this.dungeon.start,{hp:this.stats.maxHp,mana:this.stats.maxMana,shield:0,invulnerable:3,statuses:{}});this.enemies=[];this.projectiles=[];this.hazards=[];this.zones=[];this.notify('陈列回廊重塑了你的躯体','gold');return;}
     if (p.hp <= 0) { p.hp = 0; this.finish('dead'); }

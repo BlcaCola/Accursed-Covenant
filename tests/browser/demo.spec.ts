@@ -172,6 +172,7 @@ test('exploration contracts, PNG interface, resource clipping and boss phase',as
   await page.getByRole('button',{name:'接受契约'}).click();
   await expect(page.locator('#objective-title')).toContainText('诅咒试炼');
   const reinforcement=await page.evaluate(()=>{const api=(window as any).__ASHBOUND_TEST__,r=api.run,e=r.activeEncounter;r.player.invulnerable=999;for(const enemy of r.enemies.filter((value:any)=>value.encounterEvent===e.id))enemy.hp=0;api.step(3.3);return{waves:e.waves,alive:r.enemies.filter((value:any)=>value.encounterEvent===e.id&&value.hp>0).length};});expect(reinforcement.waves).toBeGreaterThanOrEqual(2);expect(reinforcement.alive).toBeGreaterThan(0);
+  if(await page.locator('.upgrade-card').first().isVisible())await page.locator('.upgrade-card').first().click();
   await page.keyboard.press('Escape');const clock=await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.activeEncounter.remaining);
   await page.waitForTimeout(200);expect(await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.activeEncounter.remaining)).toBe(clock);
   await page.getByRole('button',{name:/继续远征/}).click();
@@ -237,7 +238,7 @@ test('camp NPC economy and authored boss sprites are playable',async({page})=>{
 
 test('developer panel controls combat telemetry without entering production UI',async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();
-  await expect(page.locator('.qa-toggle')).toBeVisible();await page.locator('.qa-toggle').click();await expect(page.getByText('DEMO 0.12 调试台')).toBeVisible();
+  await expect(page.locator('.qa-toggle')).toBeVisible();await page.locator('.qa-toggle').click();await expect(page.getByText('DEMO 0.14 调试台')).toBeVisible();
   await page.locator('.qa-theme').selectOption('cathedral');await page.locator('[data-qa="load-theme"]').click();await expect(page.locator('#map-loading')).toBeVisible();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;return[run.dungeon.theme,run.dungeon.rooms[0].archetype];})).toEqual(['cathedral','narthex']);
   expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,encounter=run.roomEncounters[0],room=run.dungeon.rooms[encounter.room];if(!room)throw new Error('教堂战斗房生成失败');Object.assign(run.player,{x:(room.x+room.w/2)*32,y:(room.y+room.h/2)*32,invulnerable:9999});run.reveal();return{archetype:room.archetype,state:encounter.state};})).toMatchObject({state:'active'});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.enemies.length)).toBeGreaterThanOrEqual(1);
   await page.locator('.qa-toggle').click();await page.waitForTimeout(500);await page.screenshot({path:'test-results/cathedral-chapel-v11.png'});await page.locator('.qa-toggle').click();

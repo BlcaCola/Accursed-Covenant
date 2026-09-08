@@ -20,7 +20,8 @@ _Current browser demo with its dark isometric, pixel-art-inspired presentation a
 
 ## Highlights
 
-- **Three heroes:** Sorceress, Necromancer, and Blood Knight have unique looks, skills, ultimates, and talent trees. Equipment, inventory, and currency are shared during the current browser session.
+- **Three heroes:** Sorceress, Necromancer, and Blood Knight have unique looks, skills, ultimates, talent trees, and distinct Elemental Resonance, Soulfire, or Bloodrage combat loops. Equipment, inventory, and currency are shared during the current browser session.
+- **Weapon and evolution identities:** Eight weapon types use different ranges, cadences, arcs, projectiles, and combo rules. Every one of the 30 skill evolutions has a matching legendary Covenant.
 - **Eight-map expeditions:** each run crosses increasingly dangerous procedural maps with 5–15 main rooms, loops, corridors, hidden vaults, breakable walls, encounters, treasure, and guardian arenas. Map eight ends with a giant three-phase final boss.
 - **Fifteen themes:** caves, dungeons, cathedrals, abandoned villages, inferno, mountains, towns, palaces, catacombs, sewers, frozen ruins, swamps, mines, desert temples, and abyssal fortresses have distinct layouts, hazards, encounters, monster pools, and relics.
 - **Automatic or manual casting:** the four regular skills can cycle automatically, or be triggered with 1–4 after disabling autocast. Every slot shows its live cooldown. Mouse aim sets cast direction, with out-of-range targets clamped to the farthest valid point. Right-click performs a mana-free basic attack.
@@ -149,6 +150,19 @@ npm run build
 ```
 
 Upload the contents of `dist/` to any static host. Relative asset URLs support both a domain root and a subpath such as `/games/accursed-covenant/`. Deployment requires no Node.js process, API, WebSocket, database, or external CDN. Do not launch the production game through a local `file://` URL.
+
+### GitHub Pages
+
+The repository includes `.github/workflows/deploy-pages.yml`. To publish it:
+
+1. Open the repository **Settings → Pages**.
+2. Under **Build and deployment**, choose **GitHub Actions** as the source.
+3. Push to `main`, or run **Deploy GitHub Pages** manually from the Actions tab.
+4. After the workflow succeeds, open `https://blcacola.github.io/Accursed-Covenant/`.
+
+The workflow downloads Git LFS assets, tests the project, builds `dist`, and deploys that directory. Because Vite uses `base: './'`, no repository-name-specific path setting is required.
+
+The current static asset library is roughly 760 MB. This remains below GitHub Pages' 1 GB published-site limit, but it leaves limited headroom and makes the first download heavy. Future asset work should prefer atlas deduplication, WebP/AVIF where appropriate, and loading only the frames used by the current theme.
 
 ## Current limitations
 
