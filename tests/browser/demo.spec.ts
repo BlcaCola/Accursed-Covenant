@@ -104,7 +104,7 @@ test('inventory slots stay aligned and camp combat meters stay hidden',async({pa
   await page.locator('[data-command="start"]').click();
   await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
   await expect(page.locator('.class-resource')).toContainText('元素共鸣');await expect(page.locator('#class-resource-hint')).toContainText('施放技能与暴击积蓄');
-  const combatUi=await page.evaluate(()=>{const resource=document.querySelector('.class-resource')!.getBoundingClientRect(),hud=document.querySelector('.hud')!.getBoundingClientRect();return{resourceBottom:resource.bottom,hudTop:hud.top};});expect(combatUi.resourceBottom).toBeLessThanOrEqual(combatUi.hudTop+4);
+  const combatUi=await page.evaluate(()=>{const resource=document.querySelector('.class-resource')!.getBoundingClientRect(),hud=document.querySelector('.hud')!.getBoundingClientRect(),experience=document.querySelector('.experience')!.getBoundingClientRect();return{resource,hud,experience};});expect(combatUi.resource.top).toBeGreaterThanOrEqual(combatUi.hud.top);expect(combatUi.resource.bottom).toBeLessThan(combatUi.experience.top);
   await page.screenshot({path:'test-results/class-resource-position-v15-2.png'});
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,base={rarity:'legendary',power:9,level:9,damage:12,health:8,haste:.03,crit:.02,description:'界面几何验收装备。'};run.receiveItem({id:991500,name:'迅捷的守夜人胸甲契约',slot:'chest',...base});run.receiveItem({id:991501,name:'灰烬长杖',slot:'weapon',weaponKind:'staff',...base});run.receiveItem({id:991502,name:'不灭骨戒',slot:'ring1',...base});});
   await page.keyboard.press('i');
@@ -121,6 +121,13 @@ test('inventory slots stay aligned and camp combat meters stay hidden',async({pa
   geometry.arts.forEach((art,index)=>expect(Math.abs((art.y+art.h/2)-(geometry.cards[index].y+geometry.cards[index].h/2))).toBeLessThan(2));
   expect(geometry.buttons.every(button=>button.w>35&&button.h>14&&button.whiteSpace==='nowrap'&&button.writingMode.startsWith('horizontal'))).toBe(true);
   await page.screenshot({path:'test-results/inventory-alignment-v15-1.png'});
+});
+
+test('class resource remains inside the HUD at a wide low-height resolution',async({page})=>{
+  await page.setViewportSize({width:1983,height:606});await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
+  const boxes=await page.evaluate(()=>{const box=(selector:string)=>{const r=document.querySelector(selector)!.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom}};return{resource:box('.class-resource'),hud:box('.hud'),experience:box('.experience'),skills:box('.skill-slots')};});
+  expect(boxes.resource.x).toBeGreaterThan(boxes.hud.x);expect(boxes.resource.x+boxes.resource.w).toBeLessThan(boxes.hud.x+boxes.hud.w);expect(boxes.resource.b).toBeLessThan(boxes.experience.y);expect(boxes.resource.b).toBeLessThan(boxes.skills.y);
+  await page.screenshot({path:'test-results/class-resource-hud-v15-3.png'});
 });
 
 test('HUD art and live controls share exact coordinates at 150 percent DPI',async({browser})=>{

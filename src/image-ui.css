@@ -182,14 +182,22 @@
 /* The combat-only class meter must not remain over the camp/character preview. */
 .at-title .class-resource{display:none!important}
 
-/* Character resources sit immediately above the authored HUD and explain their loop. */
-.class-resource{
-  bottom:248px;
-  width:min(380px,40vw);
-  padding:7px 10px 6px;
-  background:#070a0beF;
+/* The class resource uses HUD-local coordinates, so it follows every HUD scale. */
+.hud .class-resource{
+  position:absolute;
+  z-index:4;
+  left:30%;
+  top:8%;
+  bottom:auto;
+  width:40%;
+  height:22px;
+  padding:2px 7px 3px;
+  transform:none;
+  box-sizing:border-box;
+  background:linear-gradient(90deg,#07090ae8,#0d1011f2,#07090ae8);
+  pointer-events:auto;
 }
-.class-resource>small{display:block;margin-top:5px;color:#8e938b;font-size:8px;line-height:1.35;text-align:center;white-space:nowrap}
+.hud .class-resource header{font-size:8px;line-height:9px}.hud .class-resource>div{height:3px;margin-top:2px}.hud .class-resource>small{display:none}
 .class-resource[data-resource="sorceress"]{border-color:#5f77a8;color:#a9c7ff}.class-resource[data-resource="sorceress"] i{background:linear-gradient(90deg,#263b82,#72baff)}
 .class-resource[data-resource="necromancer"]{border-color:#66865a;color:#a9d597}.class-resource[data-resource="necromancer"] i{background:linear-gradient(90deg,#274c32,#79c86d)}
 .class-resource[data-resource="bloodknight"]{border-color:#914c4d;color:#e5a09b}.class-resource[data-resource="bloodknight"] i{background:linear-gradient(90deg,#641d25,#d25b59)}
@@ -202,4 +210,3 @@
   .diablo-inventory-layout{grid-template-columns:minmax(390px,.9fr) minmax(480px,1.15fr)}
   .item-list.diablo-backpack{grid-template-columns:repeat(2,minmax(180px,1fr))}
 }
-@media(max-width:1100px){.class-resource{bottom:205px;width:min(350px,44vw)}}
