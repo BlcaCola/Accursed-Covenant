@@ -16,11 +16,13 @@ _Current browser demo with its dark isometric, pixel-art-inspired presentation a
 - **Eight-map expeditions:** each run crosses increasingly dangerous procedural maps with 5–15 main rooms, loops, corridors, hidden vaults, breakable walls, encounters, treasure, and guardian arenas. Map eight ends with a giant three-phase final boss.
 - **Fifteen themes:** caves, dungeons, cathedrals, abandoned villages, inferno, mountains, towns, palaces, catacombs, sewers, frozen ruins, swamps, mines, desert temples, and abyssal fortresses have distinct layouts, hazards, encounters, monster pools, and relics.
 - **Automatic or manual casting:** the four regular skills can cycle automatically, or be triggered with 1–4 after disabling autocast. Every slot shows its live cooldown. Mouse aim sets cast direction, with out-of-range targets clamped to the farthest valid point. Right-click performs a mana-free basic attack.
+- **Thirty skill evolutions:** every regular skill chooses one of two mutually exclusive level-three identities and gains a branch-specific apex effect at level six.
 - **Deep loot:** seven quality tiers, item levels, six affix tiers, prefixes and suffixes, eight weapon families that alter attacks, eight equipment slots, sets, uniques, legendaries, Diablo-style hover details and comparisons, animated rarity-colored loot beams, ground labels, and pickup filters.
+- **Readable build links:** the inventory summarizes active skill combinations, evolved forms, matching item mechanics, and the dominant talent branch; item tooltips explain their current skill and talent synergy.
 - **Monster ecology:** 60 animated monster sets form melee lines, ranged pressure, ambushes, tanks, and support groups with healing, shields, resurrection, teleportation, surrounds, and status effects.
 - **Long-term progression:** every hero has an independent 18-node talent tree with three six-node branches and three ranks per node. Respecs refund half the invested gold.
 - **Camp and events:** progression-aware merchants and smithing, potions, item upgrades, a beggar/traveler investment, cursed chests, blood altars, hunting contracts, and a secret bestiary gallery.
-- **Authored presentation:** fixed 2.5D isometric camera, eight-direction actors, theme-specific terrain, fog of war, animated portals and effects, experience drops, and Diablo-style red life and blue mana orbs.
+- **Authored presentation:** fixed 2.5D isometric camera, eight-direction actors, foreground walls above actors, theme-specific terrain, fog of war, off-screen threat markers, categorized combat numbers, animated portals and effects, experience drops, and Diablo-style red life and blue mana orbs.
 - **Chinese and English:** the title screen, HUD, menus, item text, encounters, map names, and combat information switch language at runtime.
 
 ## Run locally

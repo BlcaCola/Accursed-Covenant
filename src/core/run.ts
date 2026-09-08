@@ -6,12 +6,13 @@ import { FINAL_BOSSES, MONSTER_DEFINITIONS, RANK_DROP_CHANCE, THEME_BOSSES, THEM
 import { enemyDamageMultiplier, enemyHealthMultiplier, enemyLevel, itemLevelFrom, MAX_GREED } from './difficulty';
 import { protectedItem, QUALITY_ORDER, RARITY_COLORS, rollRarity, setPieces, watcherPieces } from './equipment';
 import { createItem, itemValue } from './loot';
-import { clamp, distance, Random, round2 } from './random';
+import { clamp, distance, fixed2, Random, round2 } from './random';
 import type { Rarity, CharacterId, Encounter, Corpse, Dungeon, Enemy, EnemyKind, GroundLoot, Hazard, Input, Item, Minion, Phase, Player, Projectile, RoomEncounter, RoomEncounterType, RoomRewardOption, Session, Skill, SkillId, Slot, Stats, ThemeId, Upgrade, Vec, VisualEvent, Zone } from './types';
 import { WING_IDS } from './cosmetics';
 import {talentBonus} from './talents';
 import {roomIdentity,THEME_DESIGNS,THEME_RELICS} from './themeDesigns';
 import {generateShowcaseDungeon,SHOWCASE_PROFILES} from './showcase';
+import {SKILL_EVOLUTIONS} from './evolutions';
 
 export const freshSession = (): Session => ({ gold: 0, forgeRank: 0, carried: {}, stash: [], bestKills: 0, victories: 0, unlockedWings:[], equippedWing:null, lastWingReward:null,talents:{sorceress:{},necromancer:{},bloodknight:{}} });
 export const idleInput = (): Input => ({ x: 0, y: 0, dash: false, burst: false, potion: false, interact: false, basicAttack:false });
@@ -290,7 +291,7 @@ export class Run {
     const score=(enemy:Enemy)=>distance(enemy,aim??this.player)-(focus?.id===enemy.id?55:0)-(enemy.rank!=='normal'?35:0)-(area?candidates.filter(other=>distance(other,enemy)<105).length*34:0)-(finisher?(1-enemy.hp/enemy.maxHp)*75:0);
     return candidates.slice().sort((a,b)=>score(a)-score(b))[0];
   }
-  private desiredMinions(skill:Skill):number{return Math.min(this.has('summonerCrown')?8:6,2+Math.floor(skill.level/2)+(skill.branch==='wide'?1:0)+(this.has('summonerCrown')?2:0));}
+  private desiredMinions(skill:Skill):number{const legion=skill.branch==='wide'&&skill.level===6,cap=this.has('summonerCrown')?8:legion?7:6;return Math.min(cap,2+Math.floor(skill.level/2)+(skill.branch==='wide'?1:0)+(legion?1:0)+(this.has('summonerCrown')?2:0));}
   private canAutoCast(skill:Skill,target?:Enemy):boolean{
     if(skill.id==='summon')return this.minions.length<this.desiredMinions(skill);
     if(skill.id==='shield'){const cap=Math.min(120,25+skill.level*12)*(this.has('guard')?1.4:1);return !!target&&this.player.shield<cap*.35;}
@@ -481,7 +482,7 @@ export class Run {
     const resisted=1-this.statusResistance,existing=this.player.statuses[status];
     this.player.statuses[status]={duration:round2(Math.max(existing?.duration??0,duration*resisted)),potency:round2(Math.max(existing?.potency??0,potency*resisted)),tick:.5};
     this.lastHit=`${source}造成的${{poison:'中毒',bleed:'流血',stun:'眩晕',chill:'寒冷',curse:'诅咒',burn:'燃烧'}[status]}`;
-    this.events.push({type:'status',...this.player,color:{poison:0x87b85c,bleed:0xd74f54,stun:0xe8ce77,chill:0x87d4ef,curse:0xb272d8,burn:0xef713f}[status]});
+    this.events.push({type:'status',...this.player,label:{poison:'中毒',bleed:'流血',stun:'眩晕',chill:'寒冷',curse:'诅咒',burn:'燃烧'}[status],color:{poison:0x87b85c,bleed:0xd74f54,stun:0xe8ce77,chill:0x87d4ef,curse:0xb272d8,burn:0xef713f}[status]});
   }
   private updatePlayerStatuses(dt:number):void{
     const damaging=new Set(['poison','bleed','burn']);
@@ -551,7 +552,7 @@ export class Run {
     const nearby = this.targets(p,this.skillRange(skill.id)).sort((a, b) => distance(a,castAim) - distance(b,castAim));
     const enhanced = this.amplify && p.mana >= 52;
     if (enhanced) p.mana -= 12; // Always reserve 40 mana for the player's manual burst.
-    const damage = (18 + skill.level * 9) * this.stats.damage * (enhanced ? 1.3 : 1) * (skill.branch === 'focused' ? 1.35 : 1) * (skill.level === 6 ? 1.4 : 1);
+    const apex=skill.level===6,damage = (18 + skill.level * 9) * this.stats.damage * (enhanced ? 1.3 : 1) * (skill.branch === 'focused' ? 1.35 : 1) * (apex ? 1.4 : 1);
     this.damageSource=SKILLS[skill.id].name;
     const width = skill.branch === 'wide' ? 1.3 : 1;
     this.events.push({type:'cast',...p,color,facing:p.attackFacing??p.facing,label:skill.id,radius:75});
@@ -560,7 +561,7 @@ export class Run {
         if(!nearby.length)return;
         let from: Vec = p;
         const hit = new Set<number>();
-        const jumps=3+Math.floor(skill.level/2)+(this.has('storm')?2:0)+(skill.branch==='wide'?2:0)+(setPieces(Object.values(this.equipped),'tempest')>=3?2:0);
+        const jumps=3+Math.floor(skill.level/2)+(this.has('storm')?2:0)+(skill.branch==='wide'?2+(apex?3:0):0)+(setPieces(Object.values(this.equipped),'tempest')>=3?2:0);
         let refunds = 0;
         for (let j = 0; j < jumps; j++) {
           const next = (j===0?nearby:this.targets(from,270)).filter(e => !hit.has(e.id)).sort((a, b) => distance(a,j===0?castAim:from)-distance(b,j===0?castAim:from))[0];
@@ -574,6 +575,7 @@ export class Run {
           if (critical && this.has('storm') && refunds < 3) { p.mana = Math.min(100, p.mana + 4); refunds++; }
           hit.add(next.id); from = { x: next.x, y: next.y };
         }
+        if(apex&&skill.branch==='focused'&&nearby[0]?.hp>0){this.events.push({type:'lightning',x:from.x,y:from.y,target:{x:nearby[0].x,y:nearby[0].y},color});this.hit(nearby[0],damage*.8,color);}
         break;
       }
       case 'blades':
@@ -584,10 +586,11 @@ export class Run {
         }
         this.events.push({ type: 'slash', ...p, radius: (92 + skill.level * 5) * width, color });
         for (const e of this.targets(p, (92 + skill.level * 5) * width)) this.hit(e, damage, color);
+        if(apex&&skill.branch==='focused'){this.events.push({type:'slash',...p,radius:105,color,facing:{x:-(p.attackFacing??p.facing).x,y:-(p.attackFacing??p.facing).y}});for(const e of this.targets(p,105))this.hit(e,damage*.65,color);}
         break;
       case 'frost':
         this.events.push({ type: 'ring', ...p, radius: 155 * width, color });
-        for (const e of this.targets(p, 155 * width)) { e.slow = 2.8; this.hit(e, damage * 1.1, color); }
+        for (const e of this.targets(p, 155 * width)) { e.slow = skill.branch==='focused'?4.2:2.8; this.hit(e, damage * 1.1, color);if(apex&&skill.branch==='focused')e.stagger=Math.max(e.stagger,.55); }
         if (skill.level === 6) this.zones.push({ id: this.nextId++, ...p, radius: 155 * width, ttl: 2.5, tick: 0, damage: damage * .2, color: 0x9adaed,sourceName:SKILLS[skill.id].name });
         break;
       case 'fire': case 'poison': case 'stormOrb': {
@@ -596,12 +599,14 @@ export class Run {
         this.zones.push({ id: this.nextId++, x: center.x, y: center.y, radius, ttl: 3 + (skill.id === 'fire' && this.has('inferno') ? 2 : 0), tick: 0, damage: damage * .48, color,sourceName:SKILLS[skill.id].name });
         if(skill.id==='fire'&&this.has('meteorEcho')&&this.rng.next()<.25)this.zones.push({id:this.nextId++,x:center.x+this.rng.int(-80,80),y:center.y+this.rng.int(-80,80),radius:radius*.72,ttl:2.5,tick:0,damage:round2(damage*.4),color});
         this.events.push({ type: 'ring', x: center.x, y: center.y, radius, color });
+        if(apex&&skill.branch==='focused')for(const e of this.targets(center,radius))this.hit(e,damage*.8,color);
         if (skill.level === 6) for (const extra of nearby.slice(1, 3)) this.zones.push({ id: this.nextId++, x: extra.x, y: extra.y, radius: radius * .65, ttl: 2, tick: 0, damage: damage * .28, color });
         break;
       }
       case 'blood': case 'bones': {
         const a = Math.atan2(castAim.y - p.y,castAim.x - p.x);
-        this.projectiles.push({ id: this.nextId++, ...p, vx: Math.cos(a) * 450, vy: Math.sin(a) * 450, ttl: 1.2, damage: damage * (skill.id === 'blood' && this.has('vampire') ? 1.25 : 1), radius: 10, enemy: false, color, pierce: 3 + skill.level + (skill.branch === 'wide' ? 3 : 0), hit: new Set(), bleed: skill.id === 'blood' });
+        const focusedApex=apex&&skill.branch==='focused'?1.25:1;
+        this.projectiles.push({ id: this.nextId++, ...p, vx: Math.cos(a) * 450, vy: Math.sin(a) * 450, ttl: 1.2, damage: damage * focusedApex*(skill.id === 'blood' && this.has('vampire') ? 1.25 : 1), radius: 10, enemy: false, color, pierce: 3 + skill.level + (skill.branch === 'wide' ? 3 : 0), hit: new Set(), bleed: skill.id === 'blood' });
         if (skill.level === 6) { this.fireProjectile(p, a - .18, damage * .6, color, 3); this.fireProjectile(p, a + .18, damage * .6, color, 3); }
         break;
       }
@@ -609,18 +614,20 @@ export class Run {
         this.raiseMinions(this.desiredMinions(skill),damage*.6,(skill.level===6?20:14)*(this.has('summonerCrown')?1.25:1));
         break;
       case 'shield': case 'warcry':
-        p.shield = Math.min(120, 25 + skill.level * 12) * (skill.id === 'shield' && this.has('guard') ? 1.4 : 1);
+        p.shield = Math.min(150, 25 + skill.level * 12) * (skill.id === 'shield' && this.has('guard') ? 1.4 : 1)*(skill.branch==='focused'?(apex?1.35:1.18):1);
         this.events.push({ type: 'ring', ...p, radius: 75 * width, color });
         for (const e of this.targets(p, (skill.id === 'warcry' ? 115 : 75) * width)) { this.hit(e, damage * .75, color); if (skill.id === 'warcry') { e.slow = 2; this.pushEnemy(e, p, 200); } }
+        if(apex&&skill.branch==='wide'){this.zones.push({id:this.nextId++,...p,radius:(skill.id==='warcry'?125:90)*width,ttl:1.8,tick:.35,damage:damage*.22,color,sourceName:SKILLS[skill.id].name});}
         break;
       case 'arcane': {
         const a = Math.atan2(castAim.y-p.y,castAim.x-p.x), count = 3 + (skill.branch === 'wide' ? 2 : 0) + (skill.level === 6 ? 2 : 0);
         for (let i = 0; i < count; i++) this.fireProjectile(p, a + (i - (count - 1) / 2) * .12, damage * .65, color, skill.branch === 'focused' ? 4 : 1);
+        if(apex&&skill.branch==='focused')this.fireProjectile(p,a,damage*.7,color,5);
         break;
       }
       case 'lance': {
         const a = Math.atan2(castAim.y-p.y,castAim.x-p.x);
-        this.fireProjectile(p, a, damage, color, 5, true);
+        this.fireProjectile(p, a, damage*(apex&&skill.branch==='focused'?1.2:1), color, 5, true);
         if (skill.branch === 'wide' || skill.level === 6) { this.fireProjectile(p, a + .24, damage * .65, color, 4, true); this.fireProjectile(p, a - .24, damage * .65, color, 4, true); }
         break;
       }
@@ -628,6 +635,7 @@ export class Run {
         const center = castAim, a = Math.atan2(center.y - p.y, center.x - p.x), radius = 140 * width;
         this.events.push({ type: 'slash', ...p, radius, color, target: center });
         for (const e of this.targets(p, radius)) if (Math.cos(Math.atan2(e.y - p.y, e.x - p.x) - a) > -.2) { this.hit(e, damage * 1.7, color); this.pushEnemy(e, p, 230); }
+        if(apex&&skill.branch==='focused')for(const e of this.targets(p,radius))if(e.hp>0&&e.hp/e.maxHp<.35&&Math.cos(Math.atan2(e.y-p.y,e.x-p.x)-a)>-.2)this.hit(e,damage*.65,color);
         if (skill.level === 6) this.zones.push({ id: this.nextId++, ...p, radius, ttl: 1.2, tick: .35, damage: damage * .45, color });
         break;
       }
@@ -635,6 +643,7 @@ export class Run {
         let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, skill.branch === 'wide' ? 5 : 3);
         if (!remains.length) remains = [{ id: -1, x: castAim.x, y: castAim.y, ttl: 0 }];
         for (const corpse of remains) { this.explodeCorpse(corpse, damage * 1.3, 95 * width); this.corpses = this.corpses.filter(c => c.id !== corpse.id); }
+        if(apex&&skill.branch==='focused')this.explodeCorpse(castAim,damage*.7,70);
         break;
       }
     }
@@ -686,6 +695,7 @@ export class Run {
         minion.attackCooldown = .85; minion.hitPose = .22;
         this.events.push({ type: 'slash', x: minion.x, y: minion.y, target: { x: target.x, y: target.y }, radius: 29, color: 0xa9bd88 });
         this.hit(target, minion.damage, 0xa9bd88,true,'召唤物');
+        const summon=this.skills.find(skill=>skill.id==='summon');if(summon?.branch==='focused'&&summon.level===6)target.stagger=Math.max(target.stagger,.28);
         if (target.hp <= 0 && this.has('corpse')) this.explodeCorpse(target, minion.damage * .65, 95);
       }
     }
@@ -707,13 +717,15 @@ export class Run {
     const lethal=enemy.hp<=0,executed=lethal&&enemy.elite&&enemy.hp+amount<=enemy.maxHp*.3,heavy=critical||amount>=enemy.maxHp*.12,impact=Math.min(1,.12+amount/150+(critical ? .24 : 0)+(lethal ? .28 : 0));
     this.telemetry.damageDealt=round2(this.telemetry.damageDealt+amount);this.telemetry.hits++;this.telemetry.criticals+=Number(critical);this.telemetry.largestHit=Math.max(this.telemetry.largestHit,amount);
     this.telemetry.bySource[source]=round2((this.telemetry.bySource[source]??0)+amount);
-    this.events.push({ type: executed?'execute':'hit', x: enemy.x, y: enemy.y, color, amount, critical,lethal,heavy,blocked:absorbed>=amount,impact,label:executed?'处决':undefined });
+    this.events.push({ type: executed?'execute':'hit', x: enemy.x, y: enemy.y, color, amount, critical,lethal,heavy,blocked:absorbed>=amount,impact,label:absorbed>=amount?'格挡':executed?'处决':undefined });
     if(this.bossCast?.enemyId===enemy.id&&!this.interruptedPhases.has(this.bossPhase)&&(critical||amount>=enemy.maxHp*.025)){
       this.interruptedPhases.add(this.bossPhase);this.bossCast=null;this.bossTimer=2.4;enemy.skillPose=0;
       this.events.push({type:'interrupt',x:enemy.x,y:enemy.y,color:0x9cecff,radius:150,label:'打断'});this.notify(`打断成功 · ${enemy.name??'首领'}的施法被粉碎`,'blue');
     }
+    const hpBefore=this.player.hp;
     if (allowProc && this.has('vampire') && this.regenBudget >= 1) { this.player.hp = Math.min(this.stats.maxHp, this.player.hp + 1); this.regenBudget--; }
     if(allowProc&&critical&&setPieces(Object.values(this.equipped),'bloodOath')>=3)this.player.hp=round2(Math.min(this.stats.maxHp,this.player.hp+1.5));
+    const healed=round2(this.player.hp-hpBefore);if(healed>0)this.events.push({type:'heal',...this.player,amount:healed,label:`+${fixed2(healed)}`,color:0x75d99a});
     if(allowProc&&weapon){
       this.weaponHits++;
       if(weapon==='mace'&&this.rng.next()<.12)enemy.stagger=Math.max(enemy.stagger,.65);
@@ -1110,15 +1122,15 @@ export class Run {
     const cursed=p.statuses.curse?.duration?1+(p.statuses.curse.potency||.18):1,defense=1-Math.min(.45,talentBonus(this.session,this.characterId,'armor')),final=round2(amount*cursed*defense),absorbed=Math.min(p.shield,final);p.shield=round2(p.shield-absorbed);p.hp=round2(p.hp-(final-absorbed));
     p.invulnerable = .45; this.lastHit = source;
     this.telemetry.damageTaken=round2(this.telemetry.damageTaken+Math.max(0,final-absorbed));
-    this.events.push({type:'playerHit',...p,amount:final,color:0xee7072,blocked:absorbed>=final,impact:Math.min(1,.25+final/100)});if(attacker&&this.has('thorns'))this.hit(attacker,round2(final*.18),0xd3b17d,false);
+    this.events.push({type:'playerHit',...p,amount:round2(final-absorbed),label:absorbed>=final?'格挡':undefined,color:0xee7072,blocked:absorbed>=final,impact:Math.min(1,.25+final/100)});if(attacker&&this.has('thorns'))this.hit(attacker,round2(final*.18),0xd3b17d,false);
     if(p.hp<=0&&this.showcaseMode){Object.assign(p,this.dungeon.start,{hp:this.stats.maxHp,mana:this.stats.maxMana,shield:0,invulnerable:3,statuses:{}});this.enemies=[];this.projectiles=[];this.hazards=[];this.zones=[];this.notify('陈列回廊重塑了你的躯体','gold');return;}
     if (p.hp <= 0) { p.hp = 0; this.finish('dead'); }
   }
   drinkPotion(): void {
     const p = this.player;
     if (p.potionCharges <= 0 || p.potionCooldown > 0 || p.hp >= this.stats.maxHp) return;
-    p.potionCharges--; p.potionCooldown = 3; p.hp = Math.min(this.stats.maxHp, p.hp + this.stats.maxHp * (.5+talentBonus(this.session,this.characterId,'potionPower')));
-    this.events.push({ type: 'heal', ...p, color: 0xc45f63 }); this.notify('饮下血瓶 · 恢复 50% 生命');
+    const before=p.hp;p.potionCharges--; p.potionCooldown = 3; p.hp = Math.min(this.stats.maxHp, p.hp + this.stats.maxHp * (.5+talentBonus(this.session,this.characterId,'potionPower')));
+    const restored=round2(p.hp-before);this.events.push({ type: 'heal', ...p,amount:restored,label:`+${fixed2(restored)}`, color: 0xc45f63 }); this.notify('饮下血瓶 · 恢复 50% 生命');
   }
   burst(): void {
     const p = this.player;
@@ -1206,10 +1218,10 @@ export class Run {
     } else {
       for (const skill of this.skills.filter(s => s.level < 6)) {
         if (skill.level === 2 && !skill.branch) {
-          const wideDescription = skill.id === 'lightning' ? '额外跳跃 2 次，单段伤害降低 15%。' : ['blood', 'bones'].includes(skill.id) ? '长矛额外穿透 3 个敌人。' : skill.id === 'summon' ? '召唤上限增加 1 名，最多 6 名。' : skill.id === 'blades' ? '环绕旋刃改为向外飞出再回返的刀刃，适合拉开距离。' : skill.id === 'lance' ? '回旋飞刃变为三路扇形投掷。' : skill.id === 'arcane' ? '秘法飞矢额外发射 2 枚。' : '技能影响半径扩大 30%。';
-          options.push({ key: `wide-${skill.id}`, title: `${SKILLS[skill.id].name} · 广域`, description: wideDescription, skill: skill.id, kind: 'wide' });
-          options.push({ key: `focused-${skill.id}`, title: `${SKILLS[skill.id].name} · 凝聚`, description: '升至 3 级，伤害提高 35%。链雷剩余跳跃可转为单体追加伤害。', skill: skill.id, kind: 'focused' });
-        } else options.push({ key: `level-${skill.id}`, title: `${SKILLS[skill.id].name} · ${skill.level === 5 ? '终极蜕变' : '强化'}`, description: skill.level === 5 ? '升至 6 级，获得额外 40% 伤害，并强化技能规模。' : `升至 ${skill.level + 1} 级，提高基础伤害与技能效果。`, skill: skill.id, kind: 'level' });
+          const wide=SKILL_EVOLUTIONS[skill.id].wide,focused=SKILL_EVOLUTIONS[skill.id].focused;
+          options.push({ key: `wide-${skill.id}`, title: wide.name, description: wide.description, skill: skill.id, kind: 'wide' });
+          options.push({ key: `focused-${skill.id}`, title: focused.name, description: focused.description, skill: skill.id, kind: 'focused' });
+        } else {const evolution=skill.branch?SKILL_EVOLUTIONS[skill.id][skill.branch]:undefined;options.push({ key: `level-${skill.id}`, title: `${evolution?.name??SKILLS[skill.id].name} · ${skill.level === 5 ? '终极蜕变' : '强化'}`, description: skill.level === 5 ? `${evolution?.apex??'升至 6 级并强化技能规模。'} 基础伤害额外提高 40%。` : `升至 ${skill.level + 1} 级，提高基础伤害与技能效果。`, skill: skill.id, kind: 'level' });}
       }
       this.upgrades = this.rng.shuffle(options).slice(0, 3);
       // Stable fallback includes every omitted equipped skill, so RNG cannot block a build.

@@ -42,6 +42,11 @@ describe('combat feedback telemetry',()=>{
     expect(run.events.some(event=>event.type==='playerHit')).toBe(true);expect(run.telemetry.damageTaken).toBeGreaterThan(0);
     run.update(1/60,idleInput());expect(run.corpses[0].blood).toBeDefined();
   });
+  it('labels blocked hits, healing and ailments for distinct combat readouts',()=>{
+    const run=new Run(89,'bloodknight',freshSession());run.events=[];run.player.invulnerable=0;run.player.shield=100;run.hurt(20,'盾击测试');expect(run.events.at(-1)).toMatchObject({type:'playerHit',blocked:true,label:'格挡',amount:0});
+    (run as any).applyPlayerStatus('poison',4,2,'毒雾测试');expect(run.events.at(-1)).toMatchObject({type:'status',label:'中毒'});
+    run.player.hp=run.stats.maxHp-80;run.player.potionCooldown=0;run.drinkPotion();expect(run.events.at(-1)?.type).toBe('heal');expect(run.events.at(-1)?.label).toMatch(/^\+/);
+  });
   it('runs a readable three-phase boss cast that a heavy hit can interrupt',()=>{
     const run=new Run(91,'sorceress',freshSession()),boss=run.spawnEnemy('boss',true)!;run.skills.length=0;boss.armor=0;boss.hp=boss.maxHp*.3;
     run.update(1/60,idleInput());expect(run.bossPhase).toBe(3);
