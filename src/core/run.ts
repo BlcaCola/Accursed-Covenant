@@ -160,7 +160,7 @@ export class Run {
   get statusResistance():number{return Math.min(.75,Object.values(this.equipped).flatMap(i=>i.affixes??[]).filter(a=>a.stat==='statusResist').reduce((n,a)=>n+a.value,0)+talentBonus(this.session,this.characterId,'statusResist'));}
   get eliteDamage():number{return Object.values(this.equipped).flatMap(i=>i.affixes??[]).filter(a=>a.stat==='eliteDamage').reduce((n,a)=>n+a.value,0)+talentBonus(this.session,this.characterId,'eliteDamage');}
   get walletGold():number{return round2(this.gold+this.session.gold);}
-  get classResource():{name:string;description:string;value:number;max:number;ready:boolean}|null{return this.characterId==='sorceress'?{name:'元素共鸣',description:'施放技能与暴击积蓄；充满后下一次技能进入元素过载。',value:round2(this.classPower),max:100,ready:this.classPower>=100}:null;}
+  get classResource():{name:string;description:string;value:number;max:number;ready:boolean}{const labels={sorceress:['元素共鸣','施放技能与暴击积蓄；充满后下一次技能进入元素过载。'],necromancer:['魂火','击杀与消耗遗骸积蓄；充满后强化召唤或尸骸爆破。'],bloodknight:['血怒','攻击与承受伤害积蓄；充满后强化下一次武技并恢复生命。']}[this.characterId];return{name:labels[0],description:labels[1],value:round2(this.classPower),max:100,ready:this.classPower>=100};}
   get activeNpcs():CampNpc[]{const result:CampNpc[]=[];if(this.showcaseMode)return result;if(this.floor===1||this.floor===5)result.push('merchant','blacksmith');if(this.beggarCurrent)result.push('beggar');if(this.floor===this.travelerFloor&&!this.travelerClaimed)result.push('distant-traveler');return result;}
   get showcasePortalPosition():Vec{return this.showcaseMode?this.dungeon.exit:{x:this.dungeon.start.x,y:this.dungeon.start.y+145};}
   dropChanceForRank(rank:Enemy['rank']):number{return Math.min(1,RANK_DROP_CHANCE[rank]*(1+.06*this.greed)*(this.has('treasureHunter')?1.25:1));}
@@ -320,22 +320,25 @@ export class Run {
   }
 
   private gainClassPower(amount:number):void{
-    if(this.characterId!=='sorceress')return;
     const before=this.classPower;this.classPower=round2(Math.min(100,this.classPower+amount));
-    const resource=this.classResource;if(before<100&&this.classPower>=100&&resource){this.notify(`${resource.name}已充满 · 下一次核心行动获得强化`,'gold');this.events.push({type:'burst',...this.player,radius:72,color:this.character.color,label:resource.name});}
+    const resource=this.classResource;if(before<100&&this.classPower>=100){this.notify(`${resource.name}已充满 · 下一次核心行动获得强化`,'gold');this.events.push({type:'burst',...this.player,radius:72,color:this.character.color,label:resource.name});}
   }
   private consumeClassPower(action:SkillId|'basic'):boolean{
-    const resource=this.classResource;if(!resource||action==='basic'||this.classPower<100)return false;
+    if(this.classPower<100)return false;
+    const valid=this.characterId==='sorceress'?action!=='basic':this.characterId==='necromancer'?action==='summon'||action==='corpse':true;
+    if(!valid)return false;const resource=this.classResource;
     this.classPower=0;this.notify(`${resource.name}释放`,'gold');return true;
   }
+  private classPowerHeal():void{if(this.characterId!=='bloodknight')return;const amount=round2(this.stats.maxHp*.05);this.player.hp=round2(Math.min(this.stats.maxHp,this.player.hp+amount));this.events.push({type:'heal',...this.player,amount,color:0xc95058,label:`+${fixed2(amount)}`});}
 
   /** Right click is a separate, mana-free weapon attack with its own cadence. */
   private basicAttack(aim?:Vec):void{
     if(this.basicAttackCooldown>0)return;
     const p=this.player,weapon=this.equipped.weapon?.weaponKind??(this.characterId==='bloodknight'?'sword':'wand'),profile=WEAPONS[weapon],point=this.aimedPoint(aim,profile.range),angle=Math.atan2(point.y-p.y,point.x-p.x),color=this.character.color;
     this.basicAttackCooldown=Math.max(.2,profile.cadence*(1-this.stats.haste*.45));p.attackPose=.48;p.attackFacing={x:Math.cos(angle),y:Math.sin(angle)};this.damageSource='基础攻击';
-    const comboHeavy=weapon==='sword'&&this.weaponCombo===2;this.weaponCombo=weapon==='sword'?(this.weaponCombo+1)%3:0;this.weaponComboWindow=1.5;
-    const damage=(11+this.level*2.2)*this.stats.damage*profile.damageScale*(comboHeavy?1.45:1);
+    const classEmpowered=this.consumeClassPower('basic'),comboHeavy=weapon==='sword'&&this.weaponCombo===2;this.weaponCombo=weapon==='sword'?(this.weaponCombo+1)%3:0;this.weaponComboWindow=1.5;
+    const damage=(11+this.level*2.2)*this.stats.damage*profile.damageScale*(comboHeavy?1.45:1)*(classEmpowered?1.4:1);
+    if(classEmpowered)this.classPowerHeal();
     if(profile.ranged){this.fireProjectile(p,angle,damage,color,profile.pierce);if(weapon==='wand')this.fireProjectile(p,angle+.07,damage*.58,color,0);this.events.push({type:'cast',...p,target:point,color,facing:p.attackFacing,radius:46});return;}
     const arc=comboHeavy?1.8:profile.arc;this.events.push({type:'slash',...p,target:point,radius:profile.range,color,facing:p.attackFacing,heavy:comboHeavy});
     for(const enemy of this.targets(p,profile.range+25))if(Math.cos(Math.atan2(enemy.y-p.y,enemy.x-p.x)-angle)>Math.cos(arc/2)){this.hit(enemy,damage,color,true,'基础攻击');if(weapon==='dagger'&&enemy.hp>0)this.hit(enemy,damage*.55,color,false,'副手刺击');}
@@ -658,7 +661,8 @@ export class Run {
         break;
       }
       case 'corpse': {
-        let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, (skill.branch === 'wide' ? 5 : 3)+(relic?.branch==='wide'?1:0));
+        let remains = this.corpses.filter(c => distance(c,castAim)<130*width).sort((a,b)=>distance(a,castAim)-distance(b,castAim)).slice(0, (skill.branch === 'wide' ? 5 : 3)+(relic?.branch==='wide'?1:0)+(classEmpowered?2:0));
+        if(this.characterId==='necromancer'&&remains.length)this.gainClassPower(remains.length*5);
         if (!remains.length) remains = [{ id: -1, x: castAim.x, y: castAim.y, ttl: 0 }];
         for (const corpse of remains) { this.explodeCorpse(corpse, damage * 1.3, 95 * width); this.corpses = this.corpses.filter(c => c.id !== corpse.id); }
         if(apex&&skill.branch==='focused')this.explodeCorpse(castAim,damage*.7,70);
@@ -666,6 +670,8 @@ export class Run {
       }
     }
     if(this.characterId==='sorceress')this.gainClassPower(12);
+    if(this.characterId==='bloodknight')this.gainClassPower(9);
+    if(classEmpowered)this.classPowerHeal();
     this.damageSource='基础攻击';
   }
 
@@ -737,6 +743,7 @@ export class Run {
     this.telemetry.damageDealt=round2(this.telemetry.damageDealt+amount);this.telemetry.hits++;this.telemetry.criticals+=Number(critical);this.telemetry.largestHit=Math.max(this.telemetry.largestHit,amount);
     this.telemetry.bySource[source]=round2((this.telemetry.bySource[source]??0)+amount);
     if(allowProc&&this.characterId==='sorceress'&&critical)this.gainClassPower(4);
+    if(allowProc&&this.characterId==='bloodknight')this.gainClassPower(3);
     this.events.push({ type: executed?'execute':'hit', x: enemy.x, y: enemy.y, color, amount, critical,lethal,heavy,blocked:absorbed>=amount,impact,label:absorbed>=amount?'格挡':executed?'处决':undefined });
     if(this.bossCast?.enemyId===enemy.id&&!this.interruptedPhases.has(this.bossPhase)&&(critical||amount>=enemy.maxHp*.025)){
       this.interruptedPhases.add(this.bossPhase);this.bossCast=null;this.bossTimer=2.4;enemy.skillPose=0;
@@ -762,6 +769,7 @@ export class Run {
 
   private kill(e: Enemy,source='基础攻击'): void {
     this.kills++;this.telemetry.kills++;
+    if(this.characterId==='necromancer')this.gainClassPower(source==='尸骸爆破'||source==='召唤物'?14:9);
     const roomEncounter=e.encounterRoom===undefined?undefined:this.roomEncounters.find(value=>value.room===e.encounterRoom);if(roomEncounter)roomEncounter.kills++;
     if(e.rank==='normal')this.killsSinceRare++;
     for (const encounter of this.encounters) if (encounter.state === 'active' && encounter.kind === 'hunt' && distance(e, encounter) < 320) encounter.progress++;
@@ -1147,6 +1155,7 @@ export class Run {
     const cursed=p.statuses.curse?.duration?1+(p.statuses.curse.potency||.18):1,defense=1-Math.min(.45,talentBonus(this.session,this.characterId,'armor')),final=round2(amount*cursed*defense),absorbed=Math.min(p.shield,final);p.shield=round2(p.shield-absorbed);p.hp=round2(p.hp-(final-absorbed));
     p.invulnerable = .45; this.lastHit = source;
     this.telemetry.damageTaken=round2(this.telemetry.damageTaken+Math.max(0,final-absorbed));
+    if(this.characterId==='bloodknight'&&final>absorbed)this.gainClassPower(Math.min(12,4+(final-absorbed)*.08));
     this.events.push({type:'playerHit',...p,amount:round2(final-absorbed),label:absorbed>=final?'格挡':undefined,color:0xee7072,blocked:absorbed>=final,impact:Math.min(1,.25+final/100)});if(attacker&&this.has('thorns'))this.hit(attacker,round2(final*.18),0xd3b17d,false);
     if(p.hp<=0&&this.showcaseMode){Object.assign(p,this.dungeon.start,{hp:this.stats.maxHp,mana:this.stats.maxMana,shield:0,invulnerable:3,statuses:{}});this.enemies=[];this.projectiles=[];this.hazards=[];this.zones=[];this.notify('陈列回廊重塑了你的躯体','gold');return;}
     if (p.hp <= 0) { p.hp = 0; this.finish('dead'); }

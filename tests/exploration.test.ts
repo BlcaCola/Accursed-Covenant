@@ -26,10 +26,10 @@ describe('exploration contracts and facing',()=>{
     step(r,.2);expect(r.zones).toHaveLength(0);r.update(1/60,{...idleInput(),aim:far,skillSlot:0});step(r,.2);
     expect(r.zones).toHaveLength(1);expect(r.zones[0].x-origin.x).toBeCloseTo(410,1);expect(r.zones[0].y).toBeCloseTo(origin.y,1);expect(r.skillCooldownRemaining('fire')).toBeGreaterThan(0);
   });
-  it('casts Q at the mouse point and removes non-sorceress class meters',()=>{
+  it('casts Q at the mouse point and gives every hero a class resource',()=>{
     const r=make(),east=r.spawnEnemy('zombie')!,west=r.spawnEnemy('zombie')!;Object.assign(east,{x:r.player.x+250,y:r.player.y,speed:0,attackCooldown:99,hp:500,maxHp:500});Object.assign(west,{x:r.player.x-250,y:r.player.y,speed:0,attackCooldown:99,hp:500,maxHp:500});
     r.burst({x:east.x,y:east.y});expect(east.hp).toBeLessThan(500);expect(west.hp).toBe(500);expect(r.events.some(event=>event.type==='burst'&&Math.abs(event.x-east.x)<1)).toBe(true);
-    expect(new Run(1,'necromancer',freshSession()).classResource).toBeNull();expect(new Run(2,'bloodknight',freshSession()).classResource).toBeNull();
+    expect(new Run(1,'necromancer',freshSession()).classResource.name).toBe('魂火');expect(new Run(2,'bloodknight',freshSession()).classResource.name).toBe('血怒');
   });
   it('uses right-click basic attacks without mana and consumes visible corpses at the aimed point',()=>{
     const fighter=new Run(2233,'bloodknight',freshSession());fighter.skills.length=0;fighter.player.mana=0;const enemy=fighter.spawnEnemy('zombie')!;Object.assign(enemy,{x:fighter.player.x+70,y:fighter.player.y,speed:0,attackCooldown:99});const hp=enemy.hp;

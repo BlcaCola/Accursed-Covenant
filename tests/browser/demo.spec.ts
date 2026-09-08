@@ -103,17 +103,22 @@ test('inventory slots stay aligned and camp combat meters stay hidden',async({pa
   await expect(page.locator('.class-resource')).toBeHidden();
   await page.locator('[data-command="start"]').click();
   await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
-  await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.receiveItem({id:991500,name:'灰烬长杖',slot:'weapon',rarity:'legendary',power:9,level:9,damage:12,health:8,haste:.03,crit:.02,weaponKind:'staff',description:'界面几何验收装备。'});});
+  await expect(page.locator('.class-resource')).toContainText('元素共鸣');await expect(page.locator('#class-resource-hint')).toContainText('施放技能与暴击积蓄');
+  const combatUi=await page.evaluate(()=>{const resource=document.querySelector('.class-resource')!.getBoundingClientRect(),hud=document.querySelector('.hud')!.getBoundingClientRect();return{resourceBottom:resource.bottom,hudTop:hud.top};});expect(combatUi.resourceBottom).toBeLessThanOrEqual(combatUi.hudTop+4);
+  await page.screenshot({path:'test-results/class-resource-position-v15-2.png'});
+  await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,base={rarity:'legendary',power:9,level:9,damage:12,health:8,haste:.03,crit:.02,description:'界面几何验收装备。'};run.receiveItem({id:991500,name:'迅捷的守夜人胸甲契约',slot:'chest',...base});run.receiveItem({id:991501,name:'灰烬长杖',slot:'weapon',weaponKind:'staff',...base});run.receiveItem({id:991502,name:'不灭骨戒',slot:'ring1',...base});});
   await page.keyboard.press('i');
   await expect(page.getByRole('heading',{name:'契约者的行装'})).toBeVisible();
   const geometry=await page.evaluate(()=>{
     const rects=(selector:string)=>[...document.querySelectorAll(selector)].map(element=>{const r=element.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});
     const buttons=[...document.querySelectorAll('.diablo-item .item-actions button')].map(element=>{const style=getComputedStyle(element);const r=element.getBoundingClientRect();return{w:r.width,h:r.height,whiteSpace:style.whiteSpace,writingMode:style.writingMode}});
-    return{slots:rects('.diablo-equipment .equipment-slot'),buttons};
+    return{slots:rects('.diablo-equipment .equipment-slot'),cards:rects('.diablo-item'),arts:rects('.diablo-item .item-art'),buttons};
   });
   expect(new Set(geometry.slots.map(slot=>Math.round(slot.w))).size).toBe(1);
   expect(new Set(geometry.slots.map(slot=>Math.round(slot.h))).size).toBe(1);
   expect(geometry.slots.every((slot,index)=>geometry.slots.every((other,otherIndex)=>index===otherIndex||slot.x+slot.w<=other.x||other.x+other.w<=slot.x||slot.y+slot.h<=other.y||other.y+other.h<=slot.y))).toBe(true);
+  expect(Math.abs(geometry.cards[0].y-geometry.cards[1].y)).toBeLessThan(2);expect(geometry.cards[2].y).toBeGreaterThan(geometry.cards[0].y+geometry.cards[0].h);
+  geometry.arts.forEach((art,index)=>expect(Math.abs((art.y+art.h/2)-(geometry.cards[index].y+geometry.cards[index].h/2))).toBeLessThan(2));
   expect(geometry.buttons.every(button=>button.w>35&&button.h>14&&button.whiteSpace==='nowrap'&&button.writingMode.startsWith('horizontal'))).toBe(true);
   await page.screenshot({path:'test-results/inventory-alignment-v15-1.png'});
 });

@@ -121,6 +121,8 @@
 
 /* Inventory geometry stays fixed inside the paper doll instead of stretching with
    the dialog.  These rules live in the last-loaded stylesheet intentionally. */
+.inventory-dialog.diablo-inventory{width:min(1320px,96vw)}
+.diablo-inventory-layout{grid-template-columns:minmax(430px,.85fr) minmax(650px,1.3fr)}
 .equipment-grid.diablo-equipment{
   grid-template-columns:96px minmax(110px,1fr) 96px;
   grid-template-rows:repeat(3,112px);
@@ -136,10 +138,38 @@
   box-sizing:border-box;
 }
 .item-list.diablo-backpack{
-  grid-template-columns:repeat(4,minmax(108px,1fr));
-  grid-auto-rows:148px;
+  grid-template-columns:repeat(2,minmax(220px,1fr));
+  grid-auto-rows:126px;
 }
-.item-card.diablo-item{height:148px;box-sizing:border-box}
+.item-card.diablo-item{
+  display:grid;
+  grid-template-columns:72px minmax(0,1fr);
+  grid-template-rows:min-content min-content 1fr;
+  column-gap:10px;
+  row-gap:3px;
+  align-items:center;
+  height:126px;
+  padding:8px 10px!important;
+  border-width:8px!important;
+  border-image-width:8px!important;
+  box-sizing:border-box;
+  text-align:left;
+}
+.diablo-item>.item-art{
+  grid-column:1;
+  grid-row:1/4;
+  justify-self:center;
+  align-self:center;
+  width:64px;
+  height:70px;
+  margin:0;
+  padding:5px;
+  box-sizing:border-box;
+}
+.diablo-item>.item-art svg,.diablo-item>.item-art .equipment-art{width:46px;height:46px}
+.diablo-item>b{grid-column:2;grid-row:1;align-self:end;font-size:11px}
+.diablo-item>span{grid-column:2;grid-row:2;font-size:9px}
+.diablo-item .item-actions{grid-column:2;grid-row:3;align-self:end}
 .diablo-item .item-actions button{
   width:100%;
   min-height:22px;
@@ -152,6 +182,24 @@
 /* The combat-only class meter must not remain over the camp/character preview. */
 .at-title .class-resource{display:none!important}
 
-@media(max-width:900px){
-  .item-list.diablo-backpack{grid-template-columns:repeat(3,minmax(108px,1fr))}
+/* Character resources sit immediately above the authored HUD and explain their loop. */
+.class-resource{
+  bottom:248px;
+  width:min(380px,40vw);
+  padding:7px 10px 6px;
+  background:#070a0beF;
 }
+.class-resource>small{display:block;margin-top:5px;color:#8e938b;font-size:8px;line-height:1.35;text-align:center;white-space:nowrap}
+.class-resource[data-resource="sorceress"]{border-color:#5f77a8;color:#a9c7ff}.class-resource[data-resource="sorceress"] i{background:linear-gradient(90deg,#263b82,#72baff)}
+.class-resource[data-resource="necromancer"]{border-color:#66865a;color:#a9d597}.class-resource[data-resource="necromancer"] i{background:linear-gradient(90deg,#274c32,#79c86d)}
+.class-resource[data-resource="bloodknight"]{border-color:#914c4d;color:#e5a09b}.class-resource[data-resource="bloodknight"] i{background:linear-gradient(90deg,#641d25,#d25b59)}
+
+@media(max-width:900px){
+  .item-list.diablo-backpack{grid-template-columns:repeat(2,minmax(220px,1fr))}
+}
+@media(max-width:1180px) and (min-width:901px){
+  .inventory-dialog.diablo-inventory{width:min(1080px,96vw)}
+  .diablo-inventory-layout{grid-template-columns:minmax(390px,.9fr) minmax(480px,1.15fr)}
+  .item-list.diablo-backpack{grid-template-columns:repeat(2,minmax(180px,1fr))}
+}
+@media(max-width:1100px){.class-resource{bottom:205px;width:min(350px,44vw)}}

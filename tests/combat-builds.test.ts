@@ -28,4 +28,14 @@ describe('combat build identities',()=>{
     combat.cast(skill);
     expect(run.classResource?.value).toBe(12);
   });
+
+  it('restores Soulfire and Bloodrage as active combat loops',()=>{
+    const necro=new Run(88,'necromancer',freshSession()),victim=necro.spawnEnemy('zombie')!;victim.hp=1;necro.hit(victim,999,0x79c86d,false,'召唤物');
+    expect(necro.classResource).toMatchObject({name:'魂火',value:14,ready:false});
+    const knight=new Run(89,'bloodknight',freshSession()),target=knight.spawnEnemy('zombie')!;Object.assign(target,{x:knight.player.x+60,y:knight.player.y,speed:0,attackCooldown:99});
+    knight.update(1/60,{x:0,y:0,dash:false,burst:false,potion:false,interact:false,basicAttack:true,aim:{x:target.x,y:target.y}});
+    expect(knight.classResource.value).toBeGreaterThanOrEqual(3);
+    knight.player.invulnerable=0;knight.hurt(25,'resource test');
+    expect(knight.classResource.value).toBeGreaterThan(7);
+  });
 });
