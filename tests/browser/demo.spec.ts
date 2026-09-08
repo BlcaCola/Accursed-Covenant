@@ -127,6 +127,7 @@ test('class resource remains inside the HUD at a wide low-height resolution',asy
   await page.setViewportSize({width:1983,height:606});await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
   const boxes=await page.evaluate(()=>{const box=(selector:string)=>{const r=document.querySelector(selector)!.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom}};return{resource:box('.class-resource'),hud:box('.hud'),experience:box('.experience'),skills:box('.skill-slots')};});
   expect(boxes.resource.x).toBeGreaterThan(boxes.hud.x);expect(boxes.resource.x+boxes.resource.w).toBeLessThan(boxes.hud.x+boxes.hud.w);expect(boxes.resource.b).toBeLessThan(boxes.experience.y);expect(boxes.resource.b).toBeLessThan(boxes.skills.y);
+  expect(await page.locator('.class-resource').evaluate(element=>{const style=getComputedStyle(element);return{border:style.borderTopWidth,background:style.backgroundImage,shadow:style.boxShadow};})).toEqual({border:'0px',background:'none',shadow:'none'});
   await page.screenshot({path:'test-results/class-resource-hud-v15-3.png'});
 });
 

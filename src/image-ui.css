@@ -186,15 +186,17 @@
 .hud .class-resource{
   position:absolute;
   z-index:4;
-  left:30%;
-  top:8%;
+  left:28%;
+  top:28%;
   bottom:auto;
-  width:40%;
+  width:44%;
   height:22px;
   padding:2px 7px 3px;
   transform:none;
   box-sizing:border-box;
-  background:linear-gradient(90deg,#07090ae8,#0d1011f2,#07090ae8);
+  background:transparent;
+  border:0;
+  box-shadow:none;
   pointer-events:auto;
 }
 .hud .class-resource header{font-size:8px;line-height:9px}.hud .class-resource>div{height:3px;margin-top:2px}.hud .class-resource>small{display:none}
