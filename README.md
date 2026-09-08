@@ -22,7 +22,7 @@ _Current browser demo with its dark isometric, pixel-art-inspired presentation a
 - **Monster ecology:** 60 animated monster sets form melee lines, ranged pressure, ambushes, tanks, and support groups with healing, shields, resurrection, teleportation, surrounds, and status effects.
 - **Long-term progression:** every hero has an independent 18-node talent tree with three six-node branches and three ranks per node. Respecs refund half the invested gold.
 - **Camp and events:** progression-aware merchants and smithing, potions, item upgrades, a beggar/traveler investment, cursed chests, blood altars, hunting contracts, and a secret bestiary gallery.
-- **Authored presentation:** fixed 2.5D isometric camera, eight-direction actors, foreground walls above actors, theme-specific terrain, fog of war, off-screen threat markers, categorized combat numbers, animated portals and effects, experience drops, and Diablo-style red life and blue mana orbs.
+- **Authored presentation:** fixed 2.5D isometric camera, eight-direction actors, wall-foot depth sorting, theme-specific terrain, fog of war, off-screen threat markers, categorized combat numbers, animated portals and effects, experience drops, and Diablo-style red life and blue mana orbs.
 - **Chinese and English:** the title screen, HUD, menus, item text, encounters, map names, and combat information switch language at runtime.
 
 ## Run locally

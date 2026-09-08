@@ -68,8 +68,7 @@ export class GameScene extends Phaser.Scene {
   private showcaseLabels:Array<{text:Phaser.GameObjects.Text;position:Vec}>=[];
   private floorTextureKeys:string[]=[];
   private floorChunks:Array<{image:Phaser.GameObjects.Image;x:number;y:number}>=[];
-  private wallTextureKeys:string[]=[];
-  private wallChunks:Array<{image:Phaser.GameObjects.Image;x:number;y:number}>=[];
+  private wallPanels:Array<{image:Phaser.GameObjects.Image;x:number;y:number;footY:number}>=[];
   private numbers: { text: Phaser.GameObjects.Text; life: number }[] = [];
   private keys: Record<string, Phaser.Input.Keyboard.Key> = {};
   private accumulator = 0;
@@ -181,7 +180,7 @@ export class GameScene extends Phaser.Scene {
     for(const image of this.authoredTextureFx)image.destroy();this.authoredTextureFx=[];
     this.encounterLabels=[]; this.encounterImages=[];this.showcaseLabels=[];this.localizedLabels=[]; this.fogRevision=-1;
     for (const n of this.numbers) n.text.destroy(); this.numbers = []; this.fx = [];
-    for(const key of [...this.floorTextureKeys,...this.wallTextureKeys])if(this.textures.exists(key))this.textures.remove(key);this.floorTextureKeys=[];this.floorChunks=[];this.wallTextureKeys=[];this.wallChunks=[];
+    for(const key of this.floorTextureKeys)if(this.textures.exists(key))this.textures.remove(key);this.floorTextureKeys=[];this.floorChunks=[];this.wallPanels=[];
     this.boundRun = this.bridge.run;this.boundRevision=this.boundRun.worldRevision;
     const run = this.boundRun, map = run.dungeon, theme=THEMES[map.theme], rng = new Random(map.seed + 13),themeIndex=THEME_IDS.indexOf(map.theme);
     const sealedHiddenTile=(x:number,y:number)=>map.hiddenRooms.some(index=>{const room=map.rooms[index],wall=map.breakableWalls.find(value=>value.revealedRoom===index);return !!wall&&!wall.destroyed&&x>=room.x&&x<room.x+room.w&&y>=room.y&&y<room.y+room.h;});
@@ -189,7 +188,7 @@ export class GameScene extends Phaser.Scene {
     const minTileX=map.showcase?Math.max(0,roomMinX-3):0,maxTileX=map.showcase?Math.min(map.size-1,roomMaxX+3):map.size-1,minTileY=map.showcase?Math.max(0,roomMinY-3):0,maxTileY=map.showcase?Math.min(map.size-1,roomMaxY+16):map.size-1;
     const floor = this.add.graphics().setDepth(.2);
     const quality={high:{scale:.75,chunk:1024},standard:{scale:.5,chunk:1536},performance:{scale:.34,chunk:2048}}[run.graphicsQuality],renderScale=quality.scale,chunkSize=quality.chunk,chunkPad=128;
-    const floorSource=this.textures.get('floor-tiles').getSourceImage() as HTMLImageElement,wallSourceL=this.textures.get('wall-tiles-l').getSourceImage() as HTMLImageElement,wallSourceR=this.textures.get('wall-tiles-r').getSourceImage() as HTMLImageElement,cell=floorSource.width/4,sourceX=(themeIndex%4)*cell,sourceY=Math.floor(themeIndex/4)*cell,wallFrameL=WALL_FRAME[map.theme],wallFrameR=Math.floor(wallFrameL/4)*4+3-wallFrameL%4,wallSourceXL=(wallFrameL%4)*cell,wallSourceXR=(wallFrameR%4)*cell,wallSourceY=Math.floor(wallFrameL/4)*cell;
+    const floorSource=this.textures.get('floor-tiles').getSourceImage() as HTMLImageElement,cell=floorSource.width/4,sourceX=(themeIndex%4)*cell,sourceY=Math.floor(themeIndex/4)*cell,wallFrameL=WALL_FRAME[map.theme],wallFrameR=Math.floor(wallFrameL/4)*4+3-wallFrameL%4;
     const floorVariants=[-5,0,5].map((hue,index)=>{const variant=document.createElement('canvas');variant.width=variant.height=cell;const brush=variant.getContext('2d')!;brush.filter=`hue-rotate(${hue}deg) brightness(${.91+index*.035})`;brush.drawImage(floorSource,sourceX,sourceY,cell,cell,0,0,cell,cell);return variant;});
     type FloorChunk={canvas:HTMLCanvasElement;context:CanvasRenderingContext2D;originX:number;originY:number;key:string};
     const chunks=new Map<string,FloorChunk>(),chunkFor=(p:Vec):FloorChunk=>{
@@ -198,12 +197,6 @@ export class GameScene extends Phaser.Scene {
       const key=`floor-chunk-${map.seed}-${this.boundRevision}-${chunks.size}`,context=canvas.getContext('2d')!,originX=cx*chunkSize-chunkPad,originY=cy*chunkSize-chunkPad;
       context.imageSmoothingEnabled=false;
       chunk={canvas,context,originX,originY,key};chunks.set(id,chunk);return chunk;
-    };
-    const wallChunks=new Map<string,FloorChunk>(),wallChunkFor=(p:Vec):FloorChunk=>{
-      const cx=Math.floor(p.x/chunkSize),cy=Math.floor(p.y/chunkSize),id=`${cx}:${cy}`;let chunk=wallChunks.get(id);if(chunk)return chunk;
-      const canvas=document.createElement('canvas');canvas.width=canvas.height=(chunkSize+chunkPad*2)*renderScale;
-      const key=`wall-chunk-${map.seed}-${this.boundRevision}-${wallChunks.size}`,context=canvas.getContext('2d')!,originX=cx*chunkSize-chunkPad,originY=cy*chunkSize-chunkPad;context.imageSmoothingEnabled=false;
-      chunk={canvas,context,originX,originY,key};wallChunks.set(id,chunk);return chunk;
     };
     const qualityLabel=run.graphicsQuality==='high'?'高清':run.graphicsQuality==='standard'?'标准':'性能';
     this.bridge.onLoading(this.bridge.started,34,tr(`烘焙${qualityLabel}地板与墙体…`));
@@ -241,17 +234,19 @@ export class GameScene extends Phaser.Scene {
         context.globalAlpha=.94+((x*13+y*7+map.seed)%7)*.009;context.drawImage(variant,p.x-38*renderScale,p.y-21*renderScale,76*renderScale,76*renderScale);
       }
     }
-    const drawWall=(source:HTMLImageElement,sx:number,world:Vec,length:number)=>{const chunk=wallChunkFor(world),context=chunk.context,p={x:(world.x-chunk.originX)*renderScale,y:(world.y-chunk.originY)*renderScale},width=(78+length*34)*renderScale,height=150*renderScale;context.globalAlpha=1;context.drawImage(source,sx,wallSourceY,cell,cell,p.x-width/2,p.y-121*renderScale,width,height);};
+    const addWall=(key:'wall-tiles-l'|'wall-tiles-r',frame:number,world:Vec,length:number)=>{
+      const width=78+length*34,footY=world.y+29,image=this.add.image(world.x,footY,key,String(frame)).setOrigin(.5,1).setDisplaySize(width,150).setDepth(footY);
+      this.worldObjects.push(image);this.wallPanels.push({image,x:world.x,y:world.y-46,footY});
+    };
     // One authored wall panel spans up to three boundary tiles. Grouping straight
     // runs removes duplicate end posts at convex corners and closes concave seams.
     if(!map.showcase){
-      for(let y=minTileY;y<=maxTileY;y++)for(let x=minTileX;x<=maxTileX;){if(map.tiles[y*map.size+x]&&!sealedHiddenTile(x,y)&&(y===0||!map.tiles[(y-1)*map.size+x])){let end=x+1;while(end<=maxTileX&&map.tiles[y*map.size+end]&&!sealedHiddenTile(end,y)&&(y===0||!map.tiles[(y-1)*map.size+end]))end++;for(let start=x;start<end;start+=3){const length=Math.min(3,end-start),middle=start+(length-1)/2;drawWall(wallSourceL,wallSourceXL,project({x:middle*TILE,y:y*TILE}),length);}x=end;}else x++;}
-      for(let x=minTileX;x<=maxTileX;x++)for(let y=minTileY;y<=maxTileY;){if(map.tiles[y*map.size+x]&&!sealedHiddenTile(x,y)&&(x===0||!map.tiles[y*map.size+x-1])){let end=y+1;while(end<=maxTileY&&map.tiles[end*map.size+x]&&!sealedHiddenTile(x,end)&&(x===0||!map.tiles[end*map.size+x-1]))end++;for(let start=y;start<end;start+=3){const length=Math.min(3,end-start),middle=start+(length-1)/2;drawWall(wallSourceR,wallSourceXR,project({x:x*TILE,y:middle*TILE}),length);}y=end;}else y++;}
+      for(let y=minTileY;y<=maxTileY;y++)for(let x=minTileX;x<=maxTileX;){if(map.tiles[y*map.size+x]&&!sealedHiddenTile(x,y)&&(y===0||!map.tiles[(y-1)*map.size+x])){let end=x+1;while(end<=maxTileX&&map.tiles[y*map.size+end]&&!sealedHiddenTile(end,y)&&(y===0||!map.tiles[(y-1)*map.size+end]))end++;for(let start=x;start<end;start+=3){const length=Math.min(3,end-start),middle=start+(length-1)/2;addWall('wall-tiles-l',wallFrameL,project({x:middle*TILE,y:y*TILE}),length);}x=end;}else x++;}
+      for(let x=minTileX;x<=maxTileX;x++)for(let y=minTileY;y<=maxTileY;){if(map.tiles[y*map.size+x]&&!sealedHiddenTile(x,y)&&(x===0||!map.tiles[y*map.size+x-1])){let end=y+1;while(end<=maxTileY&&map.tiles[end*map.size+x]&&!sealedHiddenTile(x,end)&&(x===0||!map.tiles[end*map.size+x-1]))end++;for(let start=y;start<end;start+=3){const length=Math.min(3,end-start),middle=start+(length-1)/2;addWall('wall-tiles-r',wallFrameR,project({x:x*TILE,y:middle*TILE}),length);}y=end;}else y++;}
     }
     for(const chunk of chunks.values()){this.textures.addCanvas(chunk.key,chunk.canvas);this.floorTextureKeys.push(chunk.key);const image=this.add.image(chunk.originX,chunk.originY,chunk.key).setOrigin(0).setScale(1/renderScale);this.worldObjects.push(image);this.floorChunks.push({image,x:chunk.originX+chunkSize/2,y:chunk.originY+chunkSize/2});}
-    // Walls live in their own foreground canvases. This guarantees that every
-    // wall face covers actors consistently, independent of isometric Y sorting.
-    for(const chunk of wallChunks.values()){this.textures.addCanvas(chunk.key,chunk.canvas);this.wallTextureKeys.push(chunk.key);const image=this.add.image(chunk.originX,chunk.originY,chunk.key).setOrigin(0).setScale(1/renderScale).setDepth(6500);this.worldObjects.push(image);this.wallChunks.push({image,x:chunk.originX+chunkSize/2,y:chunk.originY+chunkSize/2});}
+    // Each wall panel is a separate object whose depth is its ground contact.
+    // Actors behind that line are covered; actors walking in front draw above it.
     this.bridge.onLoading(this.bridge.started,72,tr('铺设房间纹样与场景物件…'));
     // Inlaid geometric stonework gives each chamber an identifiable center.
     for (const room of map.rooms) {
@@ -281,7 +276,7 @@ export class GameScene extends Phaser.Scene {
       }else this.paintThemeMotif(floor,c,THEME_DESIGNS[map.theme].motif,theme.accent);
     }
     this.worldObjects.push(floor);
-    this.fog = this.add.graphics().setDepth(6800); this.worldObjects.push(this.fog);
+    this.fog = this.add.graphics().setDepth(900000); this.worldObjects.push(this.fog);
     this.ground = this.add.graphics().setDepth(1); this.shadows = this.add.graphics().setDepth(2);
     this.effects = this.add.graphics().setDepth(5000); this.warnings = this.add.graphics().setDepth(6000); this.bars = this.add.graphics().setDepth(6100);
     this.worldObjects.push(this.ground, this.shadows, this.effects, this.warnings, this.bars);
@@ -298,7 +293,7 @@ export class GameScene extends Phaser.Scene {
     this.worldObjects.push(altarLabel);
     this.chestImages = map.chests.map(c => { const p = project(c), image = sprite(this, 8, p.x, p.y, 45).setDepth(p.y); this.worldObjects.push(image); return image; });
     this.barrierImages=[];
-    for(const wall of map.breakableWalls)if(!wall.destroyed){const p=project(wall),left=wall.orientation==='L',key=left?'wall-tiles-l':'wall-tiles-r',frame=left?wallFrameL:wallFrameR,image=this.add.image(p.x,p.y,key,String(frame)).setOrigin(.5,.82).setDisplaySize(155,155).setTint(theme.accent).setDepth(6501);this.worldObjects.push(image);this.barrierImages.push(image);}
+    for(const wall of map.breakableWalls)if(!wall.destroyed){const p=project(wall),left=wall.orientation==='L',key=left?'wall-tiles-l':'wall-tiles-r',frame=left?wallFrameL:wallFrameR,image=this.add.image(p.x,p.y,key,String(frame)).setOrigin(.5,.82).setDisplaySize(155,155).setTint(theme.accent).setDepth(p.y+28);this.worldObjects.push(image);this.barrierImages.push(image);}
     for(const mechanism of map.mechanisms){const p=project(mechanism),frame={spikes:7,flameVent:1,frostVent:1,healingShrine:4,urn:3,ancientLever:6}[mechanism.kind],image=propSprite(this,frame,p.x,p.y,mechanism.kind==='healingShrine'?90:62).setTint(mechanism.kind==='frostVent'?0x91d9ee:mechanism.used?0x555555:0xffffff).setDepth(p.y);this.worldObjects.push(image);}
     for(const specimen of map.showcaseRooms??[]){const room=map.rooms[specimen.room],position={x:(room.x+room.w/2)*TILE,y:(room.y+room.h-.4)*TILE},door=project(position),source=`${specimen.boss?'♜ ':''}${specimen.label}`,label=this.add.text(door.x,door.y+12,tr(source),{fontFamily:'serif',fontSize:specimen.boss?'13px':'11px',color:specimen.boss?'#ef9d75':'#d8c48e',backgroundColor:'#090a0bd9',padding:{x:5,y:3},stroke:'#000',strokeThickness:2}).setOrigin(.5).setDepth(4900);this.worldObjects.push(label);this.showcaseLabels.push({text:label,position});this.localizedLabels.push({text:label,source});}
     for (const encounter of run.encounters) {
@@ -383,7 +378,7 @@ export class GameScene extends Phaser.Scene {
     cam.centerOn(pos.x,pos.y);
     const activeDistance=Math.max(this.scale.width,this.scale.height)/cam.zoom*.9+1150;
     for(const chunk of this.floorChunks)chunk.image.setVisible(Math.abs(chunk.x-pos.x)<activeDistance&&Math.abs(chunk.y-pos.y)<activeDistance);
-    for(const chunk of this.wallChunks)chunk.image.setVisible(Math.abs(chunk.x-pos.x)<activeDistance&&Math.abs(chunk.y-pos.y)<activeDistance);
+    for(const panel of this.wallPanels)panel.image.setVisible(Math.abs(panel.x-pos.x)<activeDistance&&Math.abs(panel.y-pos.y)<activeDistance);
     this.authoredTextureCursor=0;
     for(const npc of this.npcImages){const close=Phaser.Math.Distance.Between(npc.image.x,npc.image.y,pos.x,pos.y)<125,id:EffectAssetId=close?'npc-alert':'npc-question';this.paintAuthoredEffect(id,0,this.loopEffectFrame(id,t,7),npc.image.x,npc.image.y-105,28,44,close?.95:.58,0,7001);}
     if (this.fogRevision !== run.explorationRevision) {
@@ -415,7 +410,8 @@ export class GameScene extends Phaser.Scene {
       for(const door of doors){const d=project(door);this.paintAuthoredEffect('red-aura-wheel',0,this.loopEffectFrame('red-aura-wheel',t,8),d.x,d.y-16,76,76,.58,0,d.y+2);this.ground.lineStyle(4,0xd6614d,.75);this.ground.strokeEllipse(d.x,d.y,70,28);}
     }
     if(!run.showcaseMode&&!run.bossUnlocked&&!run.guardianSpawned){const seal=project(run.dungeon.exit),pulse=.55+Math.sin(t*3)*.12;this.paintAuthoredEffect('red-aura-wheel',0,this.loopEffectFrame('red-aura-wheel',t,8),seal.x,seal.y-42,155,155,pulse,0,seal.y+2);this.paintAuthoredEffect('red-ground-ring',0,this.loopEffectFrame('red-ground-ring',t,7),seal.x,seal.y,190,105,.45,0,4);this.ground.lineStyle(5,0x9e342f,.35);this.ground.strokeEllipse(seal.x,seal.y,175,70);}
-    for(const object of this.worldObjects)if(object instanceof Phaser.GameObjects.Image&&object!==this.hero&&!object.texture.key.startsWith('floor-chunk-')&&!object.texture.key.startsWith('wall-chunk-')&&!this.barrierImages.includes(object))object.setVisible(run.isExplored(unproject(object)));
+    for(const object of this.worldObjects)if(object instanceof Phaser.GameObjects.Image&&object!==this.hero&&!object.texture.key.startsWith('floor-chunk-')&&!object.texture.key.startsWith('wall-tiles-')&&!this.barrierImages.includes(object))object.setVisible(run.isExplored(unproject(object)));
+    for(const panel of this.wallPanels)panel.image.setVisible(panel.image.visible&&run.isExplored(unproject({x:panel.x,y:panel.footY})));
     for(const image of this.barrierImages){const point=unproject(image);image.setVisible(run.isExplored(point));}
     for (const pillar of this.pillars) pillar.setAlpha(Math.abs(pillar.x - pos.x) < 52 && pillar.y > pos.y && pillar.y - pos.y < 110 ? .28 : 1);
     for (const fire of this.braziers) {
