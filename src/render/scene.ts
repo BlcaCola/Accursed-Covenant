@@ -17,8 +17,9 @@ import {applyEffectFrame,EFFECT_MANIFEST,preloadEffectFirstFrames,type EffectAss
 const OFFSET = 11000;
 // The authored beam frames contain transparent padding (visible pixels occupy
 // roughly x=10..47 and y=10..108 in an 82x263 image). These dimensions and
-// offsets turn that visible area into a 72x270 column whose base meets the drop.
-const LOOT_BEAM={width:160,height:724,offsetX:24,offsetY:65,alpha:.82} as const;
+// dimensions turn that visible area into a 72x270 column. The offsets compensate
+// for transparent padding and remain the single manual alignment control.
+const LOOT_BEAM={width:160,height:724,offsetX:24,offsetY:90,alpha:.82} as const;
 const WALL_FRAME:Record<string,number>={cave:0,dungeon:2,cathedral:1,abandonedVillage:15,inferno:7,mountain:12,town:5,palace:4,catacomb:11,sewer:10,frozenRuins:6,swamp:8,mine:15,desertTemple:14,abyssFortress:13};
 export const project = (v: Vec): Vec => ({ x: v.x - v.y + OFFSET, y: (v.x + v.y) * .5 + 64 });
 const unproject = (v: Vec): Vec => ({ x: (v.x - OFFSET) / 2 + v.y - 64, y: v.y - 64 - (v.x - OFFSET) / 2 });

@@ -4,11 +4,19 @@
 
 **Accursed Covenant** is a single-player gothic action RPG prototype combining roguelite runs, survivor-style combat, procedural dungeons, incremental progression, and Diablo-inspired loot. It runs entirely in the browser and can be hosted as a static website without a game server, database, or engine runtime.
 
-> Version **0.12.3** · Playable desktop demo · TypeScript + Phaser 3 + Vite
+> Version **0.13.0** · Playable desktop demo · TypeScript + Phaser 3 + Vite
 
 ![Accursed Covenant gameplay](public/screenshots/gameplay.png)
 
 _Current browser demo with its dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
+
+## What's new in 0.13.0
+
+- Added 30 named skill evolutions: each of the 15 regular skills now chooses a level-three identity and unlocks its own level-six apex mechanic.
+- Added build analysis to the inventory and item tooltips, including active skill combinations, matching legendary mechanics, and talent-branch affinity.
+- Reworked isometric walls into individually depth-sorted panels, so actors are covered behind a wall and remain visible after walking in front of it.
+- Improved combat readability with status, healing and block readouts plus off-screen indicators for bosses, super elites, ranged enemies, and supports.
+- Standardized all equipment loot beams to one enlarged, vertically stretched silhouette and brightness; rarity now changes hue only.
 
 ## Highlights
 

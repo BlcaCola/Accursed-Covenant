@@ -40,7 +40,7 @@ export class Interface {
     this.root.innerHTML = `
       <div class="vignette" aria-hidden="true"></div>
       <header class="topbar">
-        <div class="wordmark"><span class="brand-sigil">♜</span><div>ACCURSED COVENANT<small>诅 咒 契 约</small></div><span class="build-tag">DEMO 12</span></div>
+        <div class="wordmark"><span class="brand-sigil">♜</span><div>ACCURSED COVENANT<small>诅 咒 契 约</small></div><span class="build-tag">DEMO 13</span></div>
         <div class="region"><span class="eyebrow" id="theme-subtitle">THE SUNKEN CATHEDRAL</span><span id="stage-name">沉没圣堂 · 地图 1 / 8</span></div>
         <nav aria-label="游戏设置"><button class="icon-button language-button" data-command="language" id="language-button" title="中文 / English" aria-label="切换中英文">EN</button><button class="icon-button" data-command="sound" id="sound-button" title="声音开关 [M]" aria-label="关闭音效">♪</button><button class="icon-button" data-command="fullscreen" title="全屏" aria-label="切换全屏">⛶</button><button class="icon-button" data-command="pause" title="暂停 [Esc]" aria-label="暂停游戏">Ⅱ</button></nav>
       </header>
