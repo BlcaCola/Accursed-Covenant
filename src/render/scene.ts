@@ -15,6 +15,10 @@ import {applyEffectFrame,EFFECT_MANIFEST,preloadEffectFirstFrames,type EffectAss
 // The gallery is larger than campaign maps. Every world object uses this stable
 // isometric origin while campaign terrain is baked into high-resolution chunks.
 const OFFSET = 11000;
+// The authored beam frames contain transparent padding (visible pixels occupy
+// roughly x=10..47 and y=10..108 in an 82x263 image). These dimensions and
+// offsets turn that visible area into a 72x270 column whose base meets the drop.
+const LOOT_BEAM={width:160,height:724,offsetX:24,offsetY:65,alpha:.82} as const;
 const WALL_FRAME:Record<string,number>={cave:0,dungeon:2,cathedral:1,abandonedVillage:15,inferno:7,mountain:12,town:5,palace:4,catacomb:11,sewer:10,frozenRuins:6,swamp:8,mine:15,desertTemple:14,abyssFortress:13};
 export const project = (v: Vec): Vec => ({ x: v.x - v.y + OFFSET, y: (v.x + v.y) * .5 + 64 });
 const unproject = (v: Vec): Vec => ({ x: (v.x - OFFSET) / 2 + v.y - 64, y: v.y - 64 - (v.x - OFFSET) / 2 });
@@ -508,10 +512,9 @@ export class GameScene extends Phaser.Scene {
       if (l.item) {
         const color = RARITY_COLORS[l.item.rarity];
         this.ground.fillStyle(color, .12); this.ground.fillEllipse(p.x, p.y, 48, 23);
-        const rarityIndex=Math.max(0,QUALITY_ORDER.indexOf(l.item.rarity)),beamHeight=[82,105,132,162,184,208,236][rarityIndex]??82,beamWidth=[28,32,38,44,48,54,62][rarityIndex]??28,beamAlpha=[.38,.48,.58,.68,.72,.78,.86][rarityIndex]??.38;
-        // A single authored blue beam is hue-tinted by rarity. Height, width and
-        // intensity make valuable drops readable before the ground label appears.
-        this.paintAuthoredEffect('blue-glow',0,this.loopEffectFrame('blue-glow',t,10,l.id),p.x,p.y-beamHeight*.48,beamWidth,beamHeight,beamAlpha,0,p.y, true,color);
+        // Every rarity shares one silhouette and brightness. Only hue changes.
+        // Padding compensation keeps the visible base centered on the item.
+        this.paintAuthoredEffect('blue-glow',0,this.loopEffectFrame('blue-glow',t,10,l.id),p.x+LOOT_BEAM.offsetX,p.y+LOOT_BEAM.offsetY,LOOT_BEAM.width,LOOT_BEAM.height,LOOT_BEAM.alpha,0,p.y,true,color);
         let image = this.drops.get(l.id); if (!image) {
           const frame=l.item.weaponKind?WEAPONS[l.item.weaponKind].icon:{offhand:8,head:9,chest:10,feet:11,amulet:12,ring1:13,ring2:13,weapon:0}[l.item.slot];
           image=this.add.image(p.x,p.y,'equipment-atlas',String(frame)).setOrigin(.5,.82).setScale(30/(1254/4)).setDepth(p.y+1);this.drops.set(l.id,image);
@@ -532,7 +535,9 @@ export class GameScene extends Phaser.Scene {
     for (const event of run.events.splice(0)) {
       this.bridge.audio.play(event);
       const duration = event.type === 'burst'||event.type==='execute'||event.type==='interrupt' ? .65 : event.type === 'death' ? .5 : event.type==='playerHit' ? .42 : event.type==='cast'?.55:.3;
-      this.fx.push({ event, life: duration, duration });
+      // Equipment already owns a persistent, rarity-tinted beam. Reusing the
+      // same texture as a short loot burst creates a second, mismatched column.
+      if(event.type!=='loot')this.fx.push({ event, life: duration, duration });
       if(event.type==='death'&&event.artId){const p=project(event),boss=event.artId.includes('/'),image=authoredSprite(this,boss?'boss':'monster',event.artId,p.x,p.y,boss?170:82).setDepth(p.y);this.deathSprites.push({image,event,life:.85});}
       if (['hit','playerHit','execute','interrupt','heal','status'].includes(event.type) && this.numbers.length < 42 && (event.type!=='hit'||event.critical || event.heavy || event.blocked || this.numbers.length < 12)) {
         const p = project(event),label=event.label??fixed2(event.amount??0), text = this.add.text(p.x + (Math.random() - .5) * 20, p.y-(event.type==='status'?82:55), label, { fontFamily: 'Georgia, serif', fontStyle:event.critical?'bold':'normal', fontSize: event.type==='execute'?'28px':event.critical ? '20px' : event.type==='status'?'16px':'14px', color:event.blocked?'#8ed7ff':event.type==='heal'?'#80dfa0':event.type==='status'?`#${event.color.toString(16).padStart(6,'0')}`:event.type==='interrupt'?'#a9efff':event.type==='execute'?'#ffb06b':event.color === 0xee7072 ? '#f48a83' : event.critical ? '#f2d596' : '#c7d0c9', stroke: '#0b1012', strokeThickness: 3 }).setOrigin(.5).setDepth(7200);
