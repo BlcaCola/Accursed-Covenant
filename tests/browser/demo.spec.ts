@@ -96,6 +96,28 @@ test('compact desktop layout keeps the start and HUD within the viewport', async
   await page.screenshot({path:'test-results/hud-compact-v16.png'});
 });
 
+test('inventory slots stay aligned and camp combat meters stay hidden',async({page})=>{
+  await page.setViewportSize({width:1600,height:1200});
+  await page.goto('/?qa=1');
+  await expect(page.locator('[data-command="start"]')).toBeEnabled();
+  await expect(page.locator('.class-resource')).toBeHidden();
+  await page.locator('[data-command="start"]').click();
+  await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
+  await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.receiveItem({id:991500,name:'灰烬长杖',slot:'weapon',rarity:'legendary',power:9,level:9,damage:12,health:8,haste:.03,crit:.02,weaponKind:'staff',description:'界面几何验收装备。'});});
+  await page.keyboard.press('i');
+  await expect(page.getByRole('heading',{name:'契约者的行装'})).toBeVisible();
+  const geometry=await page.evaluate(()=>{
+    const rects=(selector:string)=>[...document.querySelectorAll(selector)].map(element=>{const r=element.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});
+    const buttons=[...document.querySelectorAll('.diablo-item .item-actions button')].map(element=>{const style=getComputedStyle(element);const r=element.getBoundingClientRect();return{w:r.width,h:r.height,whiteSpace:style.whiteSpace,writingMode:style.writingMode}});
+    return{slots:rects('.diablo-equipment .equipment-slot'),buttons};
+  });
+  expect(new Set(geometry.slots.map(slot=>Math.round(slot.w))).size).toBe(1);
+  expect(new Set(geometry.slots.map(slot=>Math.round(slot.h))).size).toBe(1);
+  expect(geometry.slots.every((slot,index)=>geometry.slots.every((other,otherIndex)=>index===otherIndex||slot.x+slot.w<=other.x||other.x+other.w<=slot.x||slot.y+slot.h<=other.y||other.y+other.h<=slot.y))).toBe(true);
+  expect(geometry.buttons.every(button=>button.w>35&&button.h>14&&button.whiteSpace==='nowrap'&&button.writingMode.startsWith('horizontal'))).toBe(true);
+  await page.screenshot({path:'test-results/inventory-alignment-v15-1.png'});
+});
+
 test('HUD art and live controls share exact coordinates at 150 percent DPI',async({browser})=>{
   const context=await browser.newContext({viewport:{width:1525,height:566},deviceScaleFactor:1.5});const page=await context.newPage();
   await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});

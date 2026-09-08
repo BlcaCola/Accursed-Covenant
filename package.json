@@ -1,7 +1,7 @@
 {
   "name": "accursed-covenant",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "A browser-based gothic roguelite survivor ARPG with procedural dungeons and deep loot.",
   "license": "MIT",
   "repository": {

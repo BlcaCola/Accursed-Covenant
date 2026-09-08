@@ -4,15 +4,16 @@
 
 **Accursed Covenant** is a single-player gothic action RPG prototype combining roguelite runs, survivor-style combat, procedural dungeons, incremental progression, and Diablo-inspired loot. It runs entirely in the browser and can be hosted as a static website without a game server, database, or engine runtime.
 
-> Version **0.15.0** · Playable desktop demo · TypeScript + Phaser 3 + Vite
+> Version **0.15.1** · Playable desktop demo · TypeScript + Phaser 3 + Vite
 
 ![Accursed Covenant gameplay](public/screenshots/gameplay.png)
 
 _Current browser demo with its dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
 
-## What's new in 0.15.0
+## What's new in 0.15.1
 
-- Rebuilt inventory and equipment as a Diablo-style paper-doll and backpack grid. Full item details now appear only when the item icon is hovered.
+- Rebuilt inventory and equipment as a Diablo-style paper-doll and backpack grid, then fixed its slot geometry and item actions across desktop resolutions. Full item details appear only when the item icon is hovered.
+- Kept the Sorceress Elemental Resonance meter inside active gameplay so it no longer covers the camp character preview.
 - Made every generated room rectangular, enlarged Black Iron Mine rooms, and reveal an entire room as soon as the player enters it.
 - Moved Q ultimates to the mouse position, clamped by range, and reduced all boss visuals and collision bodies to 70% of their previous scale.
 - Added equipment and coin treasure chests, removed decorative chest reuse, and kept hidden vaults sealed from fog until their wall is broken.

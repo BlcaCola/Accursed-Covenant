@@ -118,3 +118,40 @@
   .hud .orb-label small{font-size:9px}.hud .orb-value{font-size:11px}.hud .orb-value span{font-size:8px}.hud .orb-caption{gap:8px}
   .hud .slot-key{font-size:9px}.hud .empty-sigil{font-size:19px}
 }
+
+/* Inventory geometry stays fixed inside the paper doll instead of stretching with
+   the dialog.  These rules live in the last-loaded stylesheet intentionally. */
+.equipment-grid.diablo-equipment{
+  grid-template-columns:96px minmax(110px,1fr) 96px;
+  grid-template-rows:repeat(3,112px);
+  grid-template-areas:'. head amulet' 'weapon chest offhand' 'ring1 feet ring2';
+  align-content:space-between;
+}
+.diablo-equipment .equipment-slot{
+  width:96px;
+  height:106px;
+  min-height:0;
+  justify-self:center;
+  align-self:center;
+  box-sizing:border-box;
+}
+.item-list.diablo-backpack{
+  grid-template-columns:repeat(4,minmax(108px,1fr));
+  grid-auto-rows:148px;
+}
+.item-card.diablo-item{height:148px;box-sizing:border-box}
+.diablo-item .item-actions button{
+  width:100%;
+  min-height:22px;
+  padding:4px 1px;
+  white-space:nowrap;
+  writing-mode:horizontal-tb;
+  line-height:1.1;
+}
+
+/* The combat-only class meter must not remain over the camp/character preview. */
+.at-title .class-resource{display:none!important}
+
+@media(max-width:900px){
+  .item-list.diablo-backpack{grid-template-columns:repeat(3,minmax(108px,1fr))}
+}
