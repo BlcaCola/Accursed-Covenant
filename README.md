@@ -4,17 +4,17 @@
 
 **Accursed Covenant** is a single-player gothic action RPG prototype combining roguelite runs, survivor-style combat, procedural dungeons, incremental progression, and Diablo-inspired loot. It runs entirely in the browser and can be hosted as a static website without a game server, database, or engine runtime.
 
-> Version **0.15.5** · Playable desktop demo · TypeScript + Phaser 3 + Vite
+> Version **0.15.6** · Playable desktop demo · TypeScript + Phaser 3 + Vite
 
 ![Accursed Covenant gameplay](public/screenshots/gameplay.png)
 
 _Current browser demo with its dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
 
-## What's new in 0.15.5
+## What's new in 0.15.6
 
-- English is now the default language for new page loads; the `EN / 中` control still switches the entire interface instantly.
-- Completed English coverage for menus, merchants, smithing, events, Greed details, boss phases, combat notices, generated loot, all bestiary names, renderer messages, and developer controls.
-- Added an automated localization audit that scans 1,143 player-visible Chinese source strings, including dynamic template fragments, and fails when English mode leaves untranslated text.
+- Enforced English on every fresh page load, including URLs that previously carried the test-only `lang=zh` override; the language switch still changes the current page instantly.
+- Moved talent-tree and inventory headings, statistics, close controls, content, and footer copy into the safe inner area of their authored metal frames.
+- Made full-screen panels flex with viewport height so their center content shrinks before any header or footer text can overlap the ornamental border.
 
 ## Highlights
 

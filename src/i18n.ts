@@ -2,9 +2,10 @@ import {THEME_DESIGNS} from './core/themeDesigns';
 
 export type Locale='zh'|'en';
 
-const requestedLocale=typeof window!=='undefined'?new URLSearchParams(window.location.search).get('lang'):null;
-let locale:Locale=requestedLocale==='zh'?'zh':'en';
-if(typeof document!=='undefined')document.documentElement.lang=locale==='zh'?'zh-CN':'en';
+// Every fresh page load starts in English. Language changes live only for the
+// current page session and URL parameters cannot silently override the default.
+let locale:Locale='en';
+if(typeof document!=='undefined')document.documentElement.lang='en';
 export const getLocale=():Locale=>locale;
 export const setLocale=(value:Locale):void=>{locale=value;if(typeof document!=='undefined')document.documentElement.lang=value==='zh'?'zh-CN':'en';};
 
