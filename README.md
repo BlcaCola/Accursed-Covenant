@@ -4,19 +4,17 @@
 
 **Accursed Covenant** is a single-player gothic action RPG prototype combining roguelite runs, survivor-style combat, procedural dungeons, incremental progression, and Diablo-inspired loot. It runs entirely in the browser and can be hosted as a static website without a game server, database, or engine runtime.
 
-> Version **0.15.4** · Playable desktop demo · TypeScript + Phaser 3 + Vite
+> Version **0.15.5** · Playable desktop demo · TypeScript + Phaser 3 + Vite
 
 ![Accursed Covenant gameplay](public/screenshots/gameplay.png)
 
 _Current browser demo with its dark isometric, pixel-art-inspired presentation and image-driven gothic interface._
 
-## What's new in 0.15.4
+## What's new in 0.15.5
 
-- Rebuilt inventory and equipment as a Diablo-style paper-doll and backpack grid, then fixed its slot geometry and item actions across desktop resolutions. Full item details appear only when the item icon is hovered.
-- Restored all three character resources: Elemental Resonance, Soulfire, and Bloodrage. Their compact, frameless, character-colored meters are embedded in the HUD and stay hidden in camp.
-- Made every generated room rectangular, enlarged Black Iron Mine rooms, and reveal an entire room as soon as the player enters it.
-- Moved Q ultimates to the mouse position, clamped by range, and reduced all boss visuals and collision bodies to 70% of their previous scale.
-- Added equipment and coin treasure chests, removed decorative chest reuse, and kept hidden vaults sealed from fog until their wall is broken.
+- English is now the default language for new page loads; the `EN / 中` control still switches the entire interface instantly.
+- Completed English coverage for menus, merchants, smithing, events, Greed details, boss phases, combat notices, generated loot, all bestiary names, renderer messages, and developer controls.
+- Added an automated localization audit that scans 1,143 player-visible Chinese source strings, including dynamic template fragments, and fails when English mode leaves untranslated text.
 
 ## Highlights
 
@@ -32,7 +30,7 @@ _Current browser demo with its dark isometric, pixel-art-inspired presentation a
 - **Long-term progression:** every hero has an independent 18-node talent tree with three six-node branches and three ranks per node. Respecs refund half the invested gold.
 - **Camp and events:** progression-aware merchants and smithing, potions, item upgrades, a beggar/traveler investment, cursed chests, blood altars, hunting contracts, and a secret bestiary gallery.
 - **Authored presentation:** fixed 2.5D isometric camera, eight-direction actors, wall-foot depth sorting, theme-specific terrain, fog of war, off-screen threat markers, categorized combat numbers, animated portals and effects, experience drops, and Diablo-style red life and blue mana orbs.
-- **Chinese and English:** the title screen, HUD, menus, item text, encounters, map names, and combat information switch language at runtime.
+- **English and Chinese:** English loads by default, while the title screen, HUD, menus, item text, encounters, map names, and combat information switch language at runtime.
 
 ## Run locally
 
@@ -133,6 +131,7 @@ Actor, environment, and effect assets use separate English-named directories. Gr
 ```bash
 npm run typecheck
 npm test
+npm run test:i18n
 npx playwright install chromium
 npm run test:e2e
 npm run build

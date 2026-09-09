@@ -4,7 +4,7 @@ test('complete demo journey: start, move, pause, upgrade, equip, greed, win and 
   test.setTimeout(70_000);
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?qa=1');
+  await page.goto('/?qa=1&lang=zh');
   const start = page.locator('[data-command="start"]');
   await expect(start).toBeEnabled({ timeout: 30_000 });
   await page.screenshot({ path: 'test-results/title.png' });
@@ -81,7 +81,7 @@ test('complete demo journey: start, move, pause, upgrade, equip, greed, win and 
 
 test('compact desktop layout keeps the start and HUD within the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 720 });
-  await page.goto('/?qa=1');
+  await page.goto('/?qa=1&lang=zh');
   await expect(page.locator('[data-command="start"]')).toBeEnabled();
   await page.screenshot({ path: 'test-results/selection-compact.png' });
   const startBox = await page.locator('[data-command="start"]').boundingBox();
@@ -98,7 +98,7 @@ test('compact desktop layout keeps the start and HUD within the viewport', async
 
 test('inventory slots stay aligned and camp combat meters stay hidden',async({page})=>{
   await page.setViewportSize({width:1600,height:1200});
-  await page.goto('/?qa=1');
+  await page.goto('/?qa=1&lang=zh');
   await expect(page.locator('[data-command="start"]')).toBeEnabled();
   await expect(page.locator('.class-resource')).toBeHidden();
   await page.locator('[data-command="start"]').click();
@@ -124,7 +124,7 @@ test('inventory slots stay aligned and camp combat meters stay hidden',async({pa
 });
 
 test('class resource remains inside the HUD at a wide low-height resolution',async({page})=>{
-  await page.setViewportSize({width:1983,height:606});await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
+  await page.setViewportSize({width:1983,height:606});await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
   const boxes=await page.evaluate(()=>{const box=(selector:string)=>{const r=document.querySelector(selector)!.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height,b:r.bottom}};return{resource:box('.class-resource'),hud:box('.hud'),experience:box('.experience'),skills:box('.skill-slots')};});
   expect(boxes.resource.x).toBeGreaterThan(boxes.hud.x);expect(boxes.resource.x+boxes.resource.w).toBeLessThan(boxes.hud.x+boxes.hud.w);expect(boxes.resource.b).toBeLessThan(boxes.experience.y);expect(boxes.resource.b).toBeLessThan(boxes.skills.y);
   expect(await page.locator('.class-resource').evaluate(element=>{const style=getComputedStyle(element);return{border:style.borderTopWidth,background:style.backgroundImage,shadow:style.boxShadow};})).toEqual({border:'0px',background:'none',shadow:'none'});
@@ -133,7 +133,7 @@ test('class resource remains inside the HUD at a wide low-height resolution',asy
 
 test('HUD art and live controls share exact coordinates at 150 percent DPI',async({browser})=>{
   const context=await browser.newContext({viewport:{width:1525,height:566},deviceScaleFactor:1.5});const page=await context.newPage();
-  await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
+  await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
   const geometry=await page.evaluate(()=>{const box=(selector:string)=>{const r=document.querySelector(selector)!.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height,cx:r.x+r.width/2,cy:r.y+r.height/2}};return{art:box('.hud-art'),life:box('#life-meter'),mana:box('#mana-meter'),slots:[...document.querySelectorAll('#skill-slots .skill-slot')].map((element)=>{const r=element.getBoundingClientRect();return{cx:r.x+r.width/2,cy:r.y+r.height/2}}),before:getComputedStyle(document.querySelector('#hud')!,'::before').display,after:getComputedStyle(document.querySelector('#hud')!,'::after').display};});
   expect(geometry.before).toBe('none');expect(geometry.after).toBe('none');expect(geometry.art.w/geometry.art.h).toBeCloseTo(2080/409,2);
   const close=(actual:number,expected:number)=>expect(Math.abs(actual-expected)).toBeLessThanOrEqual(2);
@@ -144,7 +144,7 @@ test('HUD art and live controls share exact coordinates at 150 percent DPI',asyn
 });
 
 test('mouse movement, manual cooldowns, basic attacks and corpse sprites work together',async({page})=>{
-  await page.setViewportSize({width:1280,height:800});await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
+  await page.setViewportSize({width:1280,height:800});await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20_000});
   const before=await page.evaluate(()=>({...((window as any).__ASHBOUND_TEST__.run.player)}));await page.mouse.click(760,400);await expect.poll(()=>page.evaluate(start=>{const p=(window as any).__ASHBOUND_TEST__.run.player;return Math.hypot(p.x-start.x,p.y-start.y)},before)).toBeGreaterThan(35);
   const enemyId=await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.skills.length=0;const enemy=run.spawnEnemy('zombie');Object.assign(enemy,{x:run.player.x+70,y:run.player.y,speed:0,attackCooldown:99});return enemy.id;});const hp=await page.evaluate(id=>(window as any).__ASHBOUND_TEST__.run.enemies.find((enemy:any)=>enemy.id===id).hp,enemyId);await page.mouse.click(710,435,{button:'right'});await expect.poll(()=>page.evaluate(id=>(window as any).__ASHBOUND_TEST__.run.enemies.find((enemy:any)=>enemy.id===id).hp,enemyId)).toBeLessThan(hp);
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.autoCast=false;run.skills.splice(0,run.skills.length,{id:'fire',level:1,branch:null});run.corpses=[{id:990077,x:run.player.x+55,y:run.player.y+20,ttl:18}];});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.scene.corpseImages.size)).toBe(1);expect(await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.scene.corpseImages.get(990077).displayWidth)).toBe(54);
@@ -154,7 +154,7 @@ test('mouse movement, manual cooldowns, basic attacks and corpse sprites work to
 
 test('Chinese and English UI, fogged walls and authored combat effects are active',async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');
-  await page.locator('.selection-language').click();await expect(page.locator('html')).toHaveAttribute('lang','en');await expect(page.locator('#game-title')).toHaveText('ACCURSED COVENANT');await expect(page.locator('.character-choice').first()).toContainText('Storm Sorceress');
+  await expect(page.locator('html')).toHaveAttribute('lang','en');await expect(page.locator('#game-title')).toHaveText('ACCURSED COVENANT');await expect(page.locator('.character-choice').first()).toContainText('Storm Sorceress');
   await page.locator('.selection-language').click();await expect(page.locator('html')).toHaveAttribute('lang','zh-CN');await expect(page.locator('#game-title')).toContainText('诅 咒 契 约');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
   const initial=await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene,run=(window as any).__ASHBOUND_TEST__.run,keys=Object.keys(scene.textures.list).filter(key=>key.startsWith('effect:'));run.loot.push({id:990001,x:run.player.x+150,y:run.player.y+10,spawnX:run.player.x+150,spawnY:run.player.y+10,xp:45,gold:0,age:0},{id:990003,x:run.player.x+90,y:run.player.y+35,spawnX:run.player.x+90,spawnY:run.player.y+35,item:{id:990003,name:'风暴之心',slot:'weapon',rarity:'legendary',power:20,level:20,damage:15,health:20,haste:.03,crit:.04,description:'链雷额外跳跃 2 次；每次施放最多 3 次暴击恢复 4 法力。'},xp:0,gold:0,age:1});run.session.gold=125;run.gold=25;return{firstFrames:keys.length,experience:scene.textures.exists('effect:experience-orb:0:0'),portal:scene.textures.exists('effect:portal/gold-body:0:0'),directional:scene.textures.exists('effect:character-lightning-cast:7:0'),wallVisible:scene.barrierImages[0]?.visible??true};});expect(initial.firstFrames).toBeGreaterThanOrEqual(80);expect(initial).toMatchObject({experience:true,portal:true,directional:true,wallVisible:false});await expect(page.locator('#gold')).toHaveText('150.00');await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.scene.xpDrops.size)).toBe(1);await expect.poll(()=>page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene;return scene.authoredTextureFx.some((image:any)=>image.visible&&image.texture.key.includes('effect:blue-glow')&&image.displayWidth===160&&image.displayHeight===724&&image.alpha===.82&&image.tintTopLeft===0xf69b46&&image.tintFill)})).toBe(true);await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,p=run.player;run.events.push({type:'lightning',x:p.x-80,y:p.y,target:{x:p.x+80,y:p.y-40},color:0x65cfff},{type:'corpse',x:p.x+30,y:p.y+55,radius:90,color:0x86d45e});run.hazards.push({id:990002,x:p.x-70,y:p.y+70,radius:58,delay:.1,ttl:1.5,damage:0,fired:false,status:'poison',sourceName:'visual-test'});});await page.waitForTimeout(500);expect(await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene;return{xp:[...scene.xpDrops.values()][0]?.texture.key??'',effects:scene.authoredTextureFx.filter((image:any)=>image.visible).map((image:any)=>image.texture.key)}})).toMatchObject({xp:expect.stringContaining('effect:experience-orb'),effects:expect.arrayContaining([expect.stringMatching(/^effect:/)])});await page.screenshot({path:'test-results/authored-effects-v16.png'});
   await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene,run=(window as any).__ASHBOUND_TEST__.run,wall=run.dungeon.breakableWalls[0];Object.assign(run.player,wall);run.reveal();});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.scene.barrierImages[0]?.visible)).toBe(true);const layers=await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene,panels=scene.wallPanels.map((panel:any)=>({depth:panel.image.depth,footY:panel.footY})),sample=panels[0];return{hero:scene.hero.depth,wall:scene.barrierImages[0].depth,panels,fog:scene.fog.depth,behindActorDepth:sample.footY-25,frontActorDepth:sample.footY+25};});expect(layers.wall).toBeGreaterThan(layers.hero);expect(layers.panels.length).toBeGreaterThan(0);expect(layers.panels.every((panel:{depth:number;footY:number})=>panel.depth===panel.footY)).toBe(true);expect(layers.behindActorDepth).toBeLessThan(layers.panels[0].depth);expect(layers.frontActorDepth).toBeGreaterThan(layers.panels[0].depth);expect(new Set(layers.panels.map((panel:{depth:number})=>panel.depth)).size).toBeGreaterThan(1);expect(layers.fog).toBeGreaterThan(Math.max(layers.wall,...layers.panels.map((panel:{depth:number})=>panel.depth)));await page.screenshot({path:'test-results/fog-wall-v16.png'});
@@ -162,14 +162,14 @@ test('Chinese and English UI, fogged walls and authored combat effects are activ
 });
 
 test('every equipment rarity uses one aligned loot-beam silhouette',async({page})=>{
-  await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
+  await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
   await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene,run=(window as any).__ASHBOUND_TEST__.run,p=run.player,rarities=['common','magic','rare','epic','legendary','set','mythic'];scene.hitStop=999;run.enemies.length=0;run.loot=rarities.map((rarity,index)=>{const shift=(index-3)*48,x=p.x+shift,y=p.y-shift;return{id:991000+index,x,y,spawnX:x,spawnY:y,xp:0,gold:0,age:1,item:{id:991000+index,name:rarity,slot:'weapon',rarity,power:10,level:10,damage:10,health:0,haste:0,crit:0,weaponKind:'staff',description:''}};});});
   await expect.poll(async()=>page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene,run=(window as any).__ASHBOUND_TEST__.run,images=scene.authoredTextureFx.filter((image:any)=>image.visible&&image.texture.key.includes('effect:blue-glow')&&image.displayWidth===160&&image.displayHeight===724),aligned=images.every((image:any)=>run.loot.some((loot:any)=>{const x=loot.x-loot.y+11000,y=(loot.x+loot.y)*.5+64;return Math.abs(image.x-(x+24))<.01&&Math.abs(image.y-(y+90))<.01;}));return{count:images.length,alphas:[...new Set(images.map((image:any)=>image.alpha))],aligned};})).toMatchObject({count:7,alphas:[.82],aligned:true});
   expect((await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene;return new Set(scene.authoredTextureFx.filter((image:any)=>image.visible&&image.texture.key.includes('effect:blue-glow')&&image.displayWidth===160).map((image:any)=>image.tintTopLeft)).size;}))).toBe(7);await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.scene.fog.setVisible(false));await page.screenshot({path:'test-results/loot-beams-v19.png'});
 });
 
 test('all three characters select distinct actors and restricted skill pools', async ({ page }) => {
-  await page.goto('/?qa=1');
+  await page.goto('/?qa=1&lang=zh');
   for (const id of ['sorceress', 'necromancer', 'bloodknight']) {
     await page.locator(`button[data-character="${id}"]`).click();
     await expect(page.locator(`button[data-character="${id}"]`)).toHaveAttribute('aria-pressed', 'true');
@@ -200,7 +200,7 @@ test('all three characters select distinct actors and restricted skill pools', a
 
 test('exploration contracts, PNG interface, resource clipping and boss phase',async({page})=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();
+  await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();
   await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run,e=r.encounters[0];Object.assign(r.player,{x:e.x,y:e.y});r.update(1/60,{x:0,y:0,dash:false,burst:false,potion:false,interact:true});});
   await expect(page.getByRole('heading',{name:'诅咒宝箱'})).toBeVisible();
   expect(await page.locator('.event-dialog').evaluate(e=>getComputedStyle(e).borderImageSource)).toContain('panel-v3.png');
@@ -229,7 +229,7 @@ test('exploration contracts, PNG interface, resource clipping and boss phase',as
 });
 
 test('breakable wall, route choice and animated portal are playable',async({page})=>{
-  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();
   const sealed=await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run,w=r.dungeon.breakableWalls[0],room=r.dungeon.rooms[w.revealedRoom],center={x:(room.x+room.w/2)*32,y:(room.y+room.h/2)*32};Object.assign(r.player,w);return{hidden:r.isExplored(center),orientation:w.orientation,tiles:w.tiles.length};});
   expect(sealed.hidden).toBe(false);expect(['L','R']).toContain(sealed.orientation);expect(sealed.tiles).toBeLessThanOrEqual(5);
   await page.waitForTimeout(250);expect(await page.evaluate(()=>{const scene=(window as any).__ASHBOUND_TEST__.scene,cam=scene.cameras.main;return{dx:Math.abs(cam.midPoint.x-scene.hero.x),dy:Math.abs(cam.midPoint.y-scene.hero.y)};})).toMatchObject({dx:0,dy:0});await page.screenshot({path:'test-results/hidden-wall-sealed-v13.png'});
@@ -242,18 +242,18 @@ test('breakable wall, route choice and animated portal are playable',async({page
 });
 
 test('monster walk frames, status HUD, affixes and pickup filter are wired',async({page})=>{
-  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();
   const enemyId=await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run;r.enemies=[];const e=r.spawnEnemy('skeleton');Object.assign(e,{x:r.player.x+80,y:r.player.y,attackCooldown:99,hp:1e9,maxHp:1e9});return e.id;});
   await expect.poll(()=>page.evaluate(id=>(window as any).__ASHBOUND_TEST__.scene.entities.get(id)?.texture.key??'',enemyId)).toContain('auth:monster:skeleton:');
   const frames:string[]=[];for(let i=0;i<6;i++){frames.push(await page.evaluate(id=>(window as any).__ASHBOUND_TEST__.scene.entities.get(id)?.texture.key??'',enemyId));await page.waitForTimeout(120);}
   expect(new Set(frames).size).toBeGreaterThan(1);expect(frames.some(key=>key.includes(':stand:'))).toBe(true);
   await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run;r.applyPlayerStatus('poison',8,3,'验收毒素');r.receiveItem({id:88001,name:'残酷的灰烬长剑·猎魔',slot:'weapon',rarity:'epic',power:21,level:21,damage:14.25,health:18.5,haste:.02,crit:.03,weaponKind:'sword',description:'验收装备',affixes:[{id:'cruel',name:'残酷',tier:3,value:5.25,stat:'damage',group:'prefix'},{id:'hunter',name:'猎魔',tier:3,value:.06,stat:'eliteDamage',group:'suffix'}]});});
-  await expect(page.locator('#status-effects')).toContainText('中毒');await page.keyboard.press('i');await expect(page.locator('.loot-filters button')).toHaveCount(3);await expect(page.locator('.rolled-affixes')).toContainText('T3 · 残酷');
+  await expect(page.locator('#status-effects')).toContainText('中毒');await page.keyboard.press('i');await expect(page.locator('.loot-filters button')).toHaveCount(3);await page.locator('[data-item-tooltip="88001"]').hover();await expect(page.locator('#item-tooltip')).toContainText('残酷');await expect(page.locator('#item-tooltip')).toContainText('T3 · 前缀');
   await page.locator('[data-filter="epic"]').click();expect(await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.lootFilter)).toBe('epic');expect(errors).toEqual([]);
 });
 
 test('sealed room combat opens a three-way reward and unlocks the boss seal',async({page})=>{
-  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,encounter=run.roomEncounters[0],room=run.dungeon.rooms[encounter.room];encounter.totalWaves=1;encounter.choiceReward=true;Object.assign(run.player,{x:(room.x+room.w/2)*32,y:(room.y+room.h/2)*32,invulnerable:999});run.reveal();});
   await expect(page.locator('#objective-title')).toContainText('房门封闭');await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.enemies.filter((enemy:any)=>enemy.encounterRoom!==undefined).length)).toBeGreaterThan(0);await page.screenshot({path:'test-results/sealed-room-combat.png'});
   await page.evaluate(()=>{const api=(window as any).__ASHBOUND_TEST__,run=api.run;for(const enemy of run.enemies.filter((value:any)=>value.encounterRoom!==undefined))run.hit(enemy,999999);if(run.activeRoomEncounter?.type==='survival')run.activeRoomEncounter.remaining=0;api.step(.1);});
@@ -262,7 +262,7 @@ test('sealed room combat opens a three-way reward and unlocks the boss seal',asy
 });
 
 test('camp NPC economy and authored boss sprites are playable',async({page})=>{
-  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();
   expect(await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.activeNpcs)).toEqual(expect.arrayContaining(['merchant','blacksmith']));
   await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run;r.session.gold=1000;Object.assign(r.player,r.npcPosition('merchant'));});await page.keyboard.press('e');await expect(page.getByRole('heading',{name:'流亡商人的珍藏'})).toBeVisible();await expect(page.locator('.shop-card')).toHaveCount(4);await page.screenshot({path:'test-results/merchant-v12.png'});await page.locator('[data-buy-offer="0"]').click();expect(await page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.inventory.length)).toBeGreaterThan(0);await page.getByRole('button',{name:'结束交易'}).click();
   await page.evaluate(()=>{const r=(window as any).__ASHBOUND_TEST__.run;Object.assign(r.player,r.npcPosition('blacksmith'));});await page.keyboard.press('e');await expect(page.getByRole('heading',{name:'铁匠的灰烬锻台'})).toBeVisible();await expect(page.locator('.smith-item')).not.toHaveCount(0);await page.getByRole('button',{name:'离开锻台'}).click();
@@ -273,8 +273,8 @@ test('camp NPC economy and authored boss sprites are playable',async({page})=>{
 });
 
 test('developer panel controls combat telemetry without entering production UI',async({page})=>{
-  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();
-  await expect(page.locator('.qa-toggle')).toBeVisible();await page.locator('.qa-toggle').click();await expect(page.getByText('DEMO 0.14 调试台')).toBeVisible();
+  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();
+  await expect(page.locator('.qa-toggle')).toBeVisible();await page.locator('.qa-toggle').click();await expect(page.getByText('DEMO 0.15 调试台')).toBeVisible();
   await page.locator('.qa-theme').selectOption('cathedral');await page.locator('[data-qa="load-theme"]').click();await expect(page.locator('#map-loading')).toBeVisible();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;return[run.dungeon.theme,run.dungeon.rooms[0].archetype];})).toEqual(['cathedral','narthex']);
   expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,encounter=run.roomEncounters[0],room=run.dungeon.rooms[encounter.room];if(!room)throw new Error('教堂战斗房生成失败');Object.assign(run.player,{x:(room.x+room.w/2)*32,y:(room.y+room.h/2)*32,invulnerable:9999});run.reveal();return{archetype:room.archetype,state:encounter.state};})).toMatchObject({state:'active'});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.enemies.length)).toBeGreaterThanOrEqual(1);
   await page.locator('.qa-toggle').click();await page.waitForTimeout(500);await page.screenshot({path:'test-results/cathedral-chapel-v11.png'});await page.locator('.qa-toggle').click();
@@ -286,7 +286,7 @@ test('developer panel controls combat telemetry without entering production UI',
 });
 
 test('all fifteen map themes load their own geometry and room identity',async({page})=>{
-  test.setTimeout(150_000);const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');await page.locator('[data-command="start"]').click();await page.locator('.qa-toggle').click();
+  test.setTimeout(150_000);const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1&lang=zh');await page.locator('[data-command="start"]').click();await page.locator('.qa-toggle').click();
   const themes=['cave','dungeon','cathedral','abandonedVillage','inferno','mountain','town','palace','catacomb','sewer','frozenRuins','swamp','mine','desertTemple','abyssFortress'];
   for(const theme of themes){
     await page.locator('.qa-theme').selectOption(theme);await page.locator('[data-qa="load-theme"]').click();await expect(page.locator('#map-loading')).toBeVisible();await expect(page.locator('#map-loading')).toBeHidden({timeout:20000});
@@ -298,7 +298,7 @@ test('all fifteen map themes load their own geometry and room identity',async({p
 });
 
 test('expanded talent tree, detailed merchant, gallery code and giant final boss are playable',async({page})=>{
-  test.setTimeout(120_000);const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1');
+  test.setTimeout(120_000);const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('/?qa=1&lang=zh');
   await page.locator('[data-command="talents"]').click();await expect(page.locator('.talent-node')).toHaveCount(18);await expect(page.locator('.talent-branch-label')).toHaveCount(3);await page.screenshot({path:'test-results/talent-tree-v12.png'});await page.locator('[data-command="talent-close"]').last().click();
   await page.locator('[data-command="start"]').click();await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;run.skills.length=0;run.phase='merchant';});await expect(page.getByRole('heading',{name:'流亡商人的珍藏'})).toBeVisible();await expect(page.locator('.shop-item-art')).toHaveCount(4);await expect(page.locator('.shop-affixes').first()).toContainText('伤害');await page.locator('#merchant-code').fill('132584');await page.locator('[data-command="unlock-showcase"]').click();await expect(page.locator('.merchant-secret')).toContainText('已经解锁');await page.screenshot({path:'test-results/merchant-detail-v12.png'});await page.locator('[data-command="resume"]').click();
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;Object.assign(run.player,run.showcasePortalPosition);run.interact();});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.showcaseMode)).toBe(true);await expect(page.locator('#stage-name')).toContainText('怪物陈列回廊',{timeout:15000});
@@ -306,5 +306,3 @@ test('expanded talent tree, detailed merchant, gallery code and giant final boss
   await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;Object.assign(run.player,run.showcasePortalPosition);run.interact();});await expect.poll(()=>page.evaluate(()=>(window as any).__ASHBOUND_TEST__.run.showcaseMode),{timeout:15000}).toBe(false);await expect(page.locator('#stage-name')).toContainText('地图 1 / 8',{timeout:15000});
   const finalId=await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run;while(run.floor<8){run.exitUnlocked=true;run.advanceFloor();}run.roomEncounters.filter((v:any)=>v.key).forEach((v:any)=>v.state='cleared');Object.assign(run.player,run.dungeon.exit,{invulnerable:999});run.reveal();return run.floorGuardian.id;});expect(await page.evaluate(()=>{const run=(window as any).__ASHBOUND_TEST__.run,room=run.dungeon.rooms[run.dungeon.bossRoom];return[room.w,room.h];})).toEqual([30,30]);await expect.poll(()=>page.evaluate(id=>(window as any).__ASHBOUND_TEST__.scene.entities.get(id)?.displayHeight??0,finalId),{timeout:20000}).toBeGreaterThanOrEqual(665);await page.screenshot({path:'test-results/final-boss-scale-v15.png'});expect(errors).toEqual([]);
 });
-
-
